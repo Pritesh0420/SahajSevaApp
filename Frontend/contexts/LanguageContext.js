@@ -49,6 +49,30 @@ const translations = {
   loading: { en: 'Loading...', hi: 'लोड हो रहा है...' },
   error: { en: 'Something went wrong', hi: 'कुछ गलत हो गया' },
   tryAgain: { en: 'Try Again', hi: 'फिर से कोशिश करें' },
+  
+  // Home cards
+  homeFindSchemesTitle: { en: 'Find Schemes for Me', hi: 'मेरे लिए योजनाएँ खोजें' },
+  homeFindSchemesDesc: { en: 'Discover government schemes you may be eligible for', hi: 'सरकारी योजनाएँ खोजें जिनके लिए आप पात्र हैं' },
+  homeFindSchemesCTA: { en: 'Go', hi: 'जाएँ' },
+  homeFillFormTitle: { en: 'Help Me Fill a Form', hi: 'मदद करें फॉर्म भरने में' },
+  homeFillFormDesc: { en: 'Understand and fill government forms with guidance', hi: 'सरकारी फॉर्म समझें और मार्गदर्शन के साथ भरें' },
+  homeFillFormCTA: { en: 'Go', hi: 'जाएँ' },
+  homeQuickTipTitle: { en: 'Quick Tip', hi: 'त्वरित सुझाव' },
+  homeQuickTipDesc: { en: 'Press the big mic button and speak about your age, job and income.', hi: 'बड़े माइक्रोफोन बटन दबाएँ और अपनी उम्र, काम और आय बोलें।' },
+  homeRecentTitle: { en: 'Recent Activity', hi: 'हाल की गतिविधि' },
+  homeRecentDesc: { en: 'No history yet', hi: 'अभी कोई इतिहास नहीं' },
+
+  // Scheme flow
+  schemeTapSpeakTitle: { en: 'Tap and Speak', hi: 'टैप करें और बोलें' },
+  schemeTapSpeakHint: { en: 'Tell us your age, job, and income...', hi: 'अपनी उम्र, काम और आय बताएं...' },
+  schemeExample: { en: '"I am 62 years old, a farmer, income ₹2 lakh"', hi: '"मैं 62 साल का हूं, किसान, आय ₹2 लाख"' },
+  schemeListeningTitle: { en: 'Listening...', hi: 'सुन रहे हैं...' },
+  schemeListeningHint: { en: 'Tell us your age, job, and income...', hi: 'अपनी उम्र, काम और आय बताएं...' },
+  schemeRecordingLabel: { en: '• Recording...', hi: '• रिकॉर्ड हो रहा है...' },
+  schemeResultsHeader: { en: 'Schemes Found for You (3)', hi: 'आपके लिए मिली योजनाएँ (3)' },
+  schemeYouSaidLabel: { en: 'You said:', hi: 'आपने कहा:' },
+  schemeListenDetailsCTA: { en: 'Listen to Details', hi: 'विवरण सुनें' },
+  schemeSearchAgainCTA: { en: 'Search Again', hi: 'फिर से खोजें' },
 };
 
 const LanguageContext = createContext(undefined);

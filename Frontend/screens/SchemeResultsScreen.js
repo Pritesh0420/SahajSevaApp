@@ -2,23 +2,25 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { COLORS, FONT_SIZES, SPACING } from '../designSystem';
 import BigButton from '../components/BigButton';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function SchemeResultsScreen({ language }) {
+  const { t } = useLanguage();
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.header}>{language === 'hi' ? 'आपके लिए मिली योजनाएँ (3)' : 'Schemes Found for You (3)'}</Text>
+      <Text style={styles.header}>{t('schemeResultsHeader')}</Text>
       <View style={styles.saidBox}>
-        <Text style={styles.saidText}>{language === 'hi' ? 'आपने कहा:' : 'You said:'}</Text>
-        <Text style={styles.quote}>{language === 'hi' ? '"मैं 62 साल का हूं, किसान, आय ₹2 लाख"' : '"I am 62 years old, a farmer, income ₹2 lakh"'}</Text>
+        <Text style={styles.saidText}>{t('schemeYouSaidLabel')}</Text>
+        <Text style={styles.quote}>{t('schemeExample')}</Text>
       </View>
       {[1,2,3].map((i) => (
         <View key={i} style={styles.schemeCard}>
           <Text style={styles.schemeTitle}>{i===1 ? 'PM-KISAN' : i===2 ? 'PM Awas Yojana' : 'Ayushman Bharat'}</Text>
           <View style={styles.benefitBar} />
-          <BigButton title={language === 'hi' ? 'विवरण सुनें' : 'Listen to Details'} onPress={() => {}} style={{ marginTop: 8, backgroundColor: COLORS.secondary }} />
+          <BigButton title={t('schemeListenDetailsCTA')} onPress={() => {}} style={{ marginTop: 8, backgroundColor: COLORS.secondary }} />
         </View>
       ))}
-      <BigButton title={language === 'hi' ? 'फिर से खोजें' : 'Search Again'} onPress={() => {}} style={{ marginVertical: 16 }} />
+      <BigButton title={t('schemeSearchAgainCTA')} onPress={() => {}} style={{ marginVertical: 16 }} />
     </ScrollView>
   );
 }

@@ -3,19 +3,21 @@ import { View, Text, StyleSheet } from 'react-native';
 import BigButton from '../components/BigButton';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONT_SIZES, SPACING } from '../designSystem';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function SchemeLandingScreen({ navigation, language }) {
+  const { t } = useLanguage();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{language === 'hi' ? 'टैप करें और बोलें' : 'Tap and Speak'}</Text>
-      <Text style={styles.subtitle}>{language === 'hi' ? 'अपनी उम्र, काम और आय बताएं...' : 'Tell us your age, job, and income...'}</Text>
+      <Text style={styles.title}>{t('schemeTapSpeakTitle')}</Text>
+      <Text style={styles.subtitle}>{t('schemeTapSpeakHint')}</Text>
       <BigButton
         title=""
         icon={<Ionicons name="mic" size={36} color={COLORS.background} />}
         onPress={() => navigation.navigate('SchemeListening')}
         style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, alignSelf: 'center', marginTop: 24 }}
       />
-      <Text style={styles.example}>{language === 'hi' ? '"मैं 62 साल का हूं, किसान, आय ₹2 लाख"' : '"I am 62 years old, a farmer, income ₹2 lakh"'}</Text>
+      <Text style={styles.example}>{t('schemeExample')}</Text>
     </View>
   );
 }
