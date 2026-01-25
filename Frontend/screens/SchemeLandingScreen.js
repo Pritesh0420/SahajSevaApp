@@ -1,23 +1,31 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import BigButton from '../components/BigButton';
-import { Ionicons } from '@expo/vector-icons';
+import MicButton from '../components/MicButton';
 import { COLORS, FONT_SIZES, SPACING } from '../designSystem';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../LanguageContext';
 
-export default function SchemeLandingScreen({ navigation, language }) {
-  const { t } = useLanguage();
+export default function SchemeLandingScreen({ navigation }) {
+  const { language } = useLanguage();
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t('schemeTapSpeakTitle')}</Text>
-      <Text style={styles.subtitle}>{t('schemeTapSpeakHint')}</Text>
-      <BigButton
-        title=""
-        icon={<Ionicons name="mic" size={36} color={COLORS.background} />}
+      <Text style={styles.title}>
+        {language === 'hi' ? 'टैप करें और बोलें' : 'Tap and Speak'}
+      </Text>
+      <Text style={styles.subtitle}>
+        {language === 'hi' ? 'अपनी उम्र, काम और आय बताएं...' : 'Tell us your age, job, and income...'}
+      </Text>
+      <MicButton
+        size="large"
         onPress={() => navigation.navigate('SchemeListening')}
-        style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, alignSelf: 'center', marginTop: 24 }}
+        style={{ marginVertical: 40 }}
       />
-      <Text style={styles.example}>{t('schemeExample')}</Text>
+      <View style={styles.exampleBox}>
+        <Text style={styles.exampleText}>
+          {language === 'hi' 
+            ? '"मैं 62 साल का हूं, किसान, आय ₹2 लाख"' 
+            : '"I am 62 years old, a farmer, income ₹2 lakh"'}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -28,23 +36,32 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     padding: SPACING.lg,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
-    fontSize: FONT_SIZES.subheading,
+    fontSize: FONT_SIZES.heading,
     color: COLORS.text,
     textAlign: 'center',
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   subtitle: {
     fontSize: FONT_SIZES.body,
     color: COLORS.secondary,
     textAlign: 'center',
+    marginBottom: 20,
   },
-  example: {
-    fontSize: FONT_SIZES.small,
+  exampleBox: {
+    backgroundColor: COLORS.border,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  exampleText: {
+    fontSize: FONT_SIZES.body,
     color: COLORS.secondary,
     textAlign: 'center',
-    marginTop: 12,
+    fontStyle: 'italic',
   },
 });

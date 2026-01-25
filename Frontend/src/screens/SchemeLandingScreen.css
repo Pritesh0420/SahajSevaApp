@@ -1,0 +1,39 @@
+.scheme-landing-screen {
+  padding: var(--spacing-xl);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.scheme-title {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.scheme-subtitle {
+  font-size: var(--font-size-body);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-xl);
+}
+
+.mic-container {
+  display: flex;
+  justify-content: center;
+  margin: 40px 0;
+}
+
+.example-box {
+  background-color: #F0F0F0;
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin-top: var(--spacing-xl);
+}
+
+.example-text {
+  font-size: var(--font-size-body);
+  color: var(--color-text-light);
+  font-style: italic;
+  margin: 0;
+}

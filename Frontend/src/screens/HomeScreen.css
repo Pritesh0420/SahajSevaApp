@@ -1,0 +1,29 @@
+.home-screen {
+  padding: var(--spacing-lg);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.home-greeting {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.home-subtitle {
+  font-size: var(--font-size-body);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-xl);
+}
+
+.action-cards {
+  margin-top: var(--spacing-lg);
+}

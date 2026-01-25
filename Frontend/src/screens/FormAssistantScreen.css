@@ -1,0 +1,51 @@
+.form-assistant-screen {
+  padding: var(--spacing-lg);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-title {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-md);
+}
+
+.form-subtitle {
+  font-size: var(--font-size-body);
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-xl);
+}
+
+.upload-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.upload-section button {
+  margin-bottom: var(--spacing-md);
+}
+
+.info-box {
+  background-color: #FFF3E0;
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+}
+
+.info-title {
+  font-size: var(--font-size-subheading);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--spacing-md) 0;
+}
+
+.info-list {
+  list-style-position: inside;
+  margin: 0;
+  padding: 0;
+}
+
+.info-list li {
+  font-size: var(--font-size-body);
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}

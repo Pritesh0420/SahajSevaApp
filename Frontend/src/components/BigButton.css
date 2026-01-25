@@ -1,0 +1,47 @@
+.big-button {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--border-radius-lg);
+  min-height: 80px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-subheading);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.big-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.big-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.big-button-primary {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.big-button-secondary {
+  background-color: var(--color-secondary);
+  color: var(--color-white);
+}
+
+.big-button-accent {
+  background-color: var(--color-accent);
+  color: var(--color-white);
+}
+
+.big-button-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.big-button-text {
+  flex: 1;
+  text-align: center;
+}

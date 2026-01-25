@@ -1,0 +1,51 @@
+.welcome-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4A7C59 0%, #6B9AC4 100%);
+  padding: var(--spacing-lg);
+}
+
+.welcome-content {
+  text-align: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.welcome-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-white);
+  margin: var(--spacing-lg) 0;
+  line-height: 1.3;
+}
+
+.welcome-tagline {
+  font-size: var(--font-size-body);
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: var(--spacing-xl);
+}
+
+.language-selection {
+  background-color: var(--color-white);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.selection-title {
+  font-size: var(--font-size-subheading);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-lg);
+  line-height: 1.4;
+}
+
+.language-selection button {
+  margin-bottom: var(--spacing-md);
+}
+
+.language-selection button:last-child {
+  margin-bottom: 0;
+}

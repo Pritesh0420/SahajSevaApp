@@ -14,7 +14,12 @@ export default function MicButton({ isListening = false, onPress, size = 'large'
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.9}
-        style={[styles.button, { width: diameter, height: diameter, borderRadius: diameter / 2, backgroundColor: isListening ? '#D9534F' : COLORS.primary }]}
+        style={[styles.button, { 
+          width: diameter, 
+          height: diameter, 
+          borderRadius: diameter / 2, 
+          backgroundColor: isListening ? '#D9534F' : COLORS.primary 
+        }]}
       >
         <Ionicons name="mic" size={iconSize} color={COLORS.background} />
       </TouchableOpacity>
@@ -23,7 +28,10 @@ export default function MicButton({ isListening = false, onPress, size = 'large'
 }
 
 const styles = StyleSheet.create({
-  wrapper: { alignItems: 'center', justifyContent: 'center' },
+  wrapper: { 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
   pulse: {
     position: 'absolute',
     borderRadius: 999,

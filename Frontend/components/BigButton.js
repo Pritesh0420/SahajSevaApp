@@ -9,7 +9,7 @@ export default function BigButton({
   onPress,
   style,
   disabled = false,
-  variant = 'primary', // 'primary' | 'secondary' | 'accent' | 'outline'
+  variant = 'primary',
   iconPosition = 'left',
   fullWidth = true,
 }) {
@@ -22,15 +22,14 @@ export default function BigButton({
       ? { backgroundColor: COLORS.accent }
       : { backgroundColor: 'transparent', borderWidth: 2, borderColor: COLORS.primary };
 
-  const contentColor =
-    variant === 'outline' ? COLORS.primary : COLORS.background;
+  const contentColor = variant === 'outline' ? COLORS.primary : COLORS.background;
 
   return (
     <TouchableOpacity
       style={[styles.button, fullWidth && { alignSelf: 'stretch' }, bgStyle, style, disabled && styles.disabled]}
       onPress={onPress}
       activeOpacity={0.8}
-      disabled={!!disabled}
+      disabled={disabled}
     >
       <View style={styles.contentRow}>
         {icon && iconPosition === 'left' && <View style={{ marginRight: 8 }}>{icon}</View>}
@@ -68,5 +67,6 @@ const styles = StyleSheet.create({
   },
   disabled: {
     backgroundColor: COLORS.border,
+    opacity: 0.6,
   },
 });

@@ -15,7 +15,7 @@ export const COLORS = {
 
 export const FONT_SIZES = {
   heading: 28,
-  subheading: 24,
+  subheading: 22,
   body: 18,
   button: 20,
   small: 16,

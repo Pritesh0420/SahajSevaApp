@@ -9,13 +9,13 @@ export default function LanguageToggle({ language, onToggle }) {
         style={[styles.button, language === 'en' && styles.selected]}
         onPress={() => onToggle('en')}
       >
-        <Text style={styles.text}>English</Text>
+        <Text style={[styles.text, language === 'en' && styles.selectedText]}>EN</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.button, language === 'hi' && styles.selected]}
         onPress={() => onToggle('hi')}
       >
-        <Text style={styles.text}>हिंदी</Text>
+        <Text style={[styles.text, language === 'hi' && styles.selectedText]}>हिं</Text>
       </TouchableOpacity>
     </View>
   );
@@ -24,22 +24,24 @@ export default function LanguageToggle({ language, onToggle }) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 8,
+    backgroundColor: COLORS.border,
+    borderRadius: BORDER_RADIUS,
+    padding: 4,
   },
   button: {
-    backgroundColor: COLORS.secondary,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: BORDER_RADIUS,
-    marginHorizontal: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: BORDER_RADIUS - 2,
   },
   selected: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.background,
   },
   text: {
-    color: COLORS.background,
-    fontSize: FONT_SIZES.body,
-    fontWeight: 'bold',
+    color: COLORS.secondary,
+    fontSize: FONT_SIZES.body - 2,
+    fontWeight: '600',
+  },
+  selectedText: {
+    color: COLORS.text,
   },
 });

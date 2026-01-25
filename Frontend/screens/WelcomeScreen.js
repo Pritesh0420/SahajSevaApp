@@ -1,23 +1,41 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Logo from '../../assets/logo';
+import Logo from '../assets/logo';
 import BigButton from '../components/BigButton';
 import { COLORS, FONT_SIZES, BORDER_RADIUS } from '../designSystem';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../LanguageContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function WelcomeScreen() {
-  const { setLanguage, t } = useLanguage();
+  const { setLanguage } = useLanguage();
   return (
     <View style={styles.container}>
       <Logo />
-      <Text style={styles.title}>{t('appName')}</Text>
+      <Text style={styles.title}>सहज सेवा</Text>
       <Text style={styles.subTitle}>Sahaj Seva</Text>
-      <Text style={styles.tagline}>{t('tagline')}</Text>
-      <View style={styles.buttonRow}>
-        <BigButton title="हिंदी" onPress={() => setLanguage('hi')} variant="primary" />
-        <BigButton title="English" onPress={() => setLanguage('en')} variant="secondary" />
+      <Text style={styles.tagline}>Your Digital Government Helper</Text>
+      <Text style={styles.taglineHindi}>आपका डिजिटल सरकारी सहायक</Text>
+      <Text style={styles.selectText}>Select Your Language / अपनी भाषा चुनें</Text>
+      <View style={styles.buttonContainer}>
+        <BigButton 
+          title="IN हिंदी (Hindi)" 
+          onPress={() => setLanguage('hi')} 
+          variant="primary" 
+          fullWidth={true}
+          style={styles.button}
+        />
+        <BigButton 
+          title="GB English" 
+          onPress={() => setLanguage('en')} 
+          variant="secondary" 
+          fullWidth={true}
+          style={styles.button}
+        />
       </View>
-      <Text style={styles.voiceHint}>{t('speakToSelect')}</Text>
+      <View style={styles.voiceHintContainer}>
+        <Ionicons name="mic" size={20} color={COLORS.secondary} />
+        <Text style={styles.voiceHint}>Or speak to select / या बोलकर चुनें</Text>
+      </View>
     </View>
   );
 }
@@ -30,36 +48,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: BORDER_RADIUS,
-  },
   title: {
-    fontSize: FONT_SIZES.heading + 4,
+    fontSize: 32,
     color: COLORS.primary,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginTop: 16,
+    marginBottom: 4,
   },
   subTitle: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.text,
-    marginBottom: 2,
+    fontSize: FONT_SIZES.heading - 4,
+    color: COLORS.secondary,
+    marginBottom: 8,
   },
   tagline: {
     fontSize: FONT_SIZES.body,
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 4,
   },
-  buttonRow: {
-    flexDirection: 'row',
+  taglineHindi: {
+    fontSize: FONT_SIZES.body,
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  selectText: {
+    fontSize: FONT_SIZES.body + 2,
+    color: COLORS.text,
+    fontWeight: '600',
     marginBottom: 24,
+    textAlign: 'center',
+  },
+  buttonContainer: {
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  button: {
+    marginVertical: 8,
+  },
+  voiceHintContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 32,
   },
   voiceHint: {
     fontSize: FONT_SIZES.small,
     color: COLORS.secondary,
-    marginTop: 16,
+    marginLeft: 8,
   },
 });

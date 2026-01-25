@@ -1,39 +1,26 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { COLORS, FONT_SIZES, SPACING } from '../designSystem';
-import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../LanguageContext';
 
-const faqs = [
-  {
-    q: 'How to find government schemes?',
-    a: 'Use the "Find Schemes" feature and speak about yourself.',
-  },
-  {
-    q: 'How to fill a form?',
-    a: 'Use the "Help Me Fill a Form" feature and follow the guidance.',
-  },
-];
-
-export default function HelpScreen({ language }) {
+export default function HelpScreen() {
+  const { language } = useLanguage();
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>{language === 'hi' ? 'सहायता' : 'Help'}</Text>
-      {faqs.map((faq, idx) => (
-        <View key={idx} style={styles.faq}>
-          <Text style={styles.q}>{faq.q}</Text>
-          <Text style={styles.a}>{faq.a}</Text>
-        </View>
-      ))}
-      <TouchableOpacity style={styles.helpButton} onPress={() => Linking.openURL('tel:1800123456')}>
-        <Ionicons name="call" size={24} color={COLORS.background} />
-        <Text style={styles.helpText}>{language === 'hi' ? 'सहायता के लिए कॉल करें' : 'Call for Help'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.videoButton} onPress={() => Linking.openURL('https://www.youtube.com/')}> 
-        <Ionicons name="play-circle" size={24} color={COLORS.accent} />
-        <Text style={styles.videoText}>{language === 'hi' ? 'वीडियो ट्यूटोरियल' : 'Video Tutorial'}</Text>
-      </TouchableOpacity>
-      <Text style={styles.contact}>{language === 'hi' ? 'संपर्क: 1800-123-456' : 'Contact: 1800-123-456'}</Text>
-    </View>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>{language === 'hi' ? 'मदद' : 'Help'}</Text>
+      </View>
+      <View style={styles.content}>
+        <Text style={styles.sectionTitle}>
+          {language === 'hi' ? 'कैसे उपयोग करें' : 'How to Use'}
+        </Text>
+        <Text style={styles.text}>
+          {language === 'hi' 
+            ? '1. अपनी भाषा चुनें\n2. योजनाएं खोजने के लिए माइक पर बोलें\n3. फॉर्म भरने के लिए फोटो अपलोड करें' 
+            : '1. Select your language\n2. Speak into the mic to find schemes\n3. Upload form photo for guidance'}
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -41,57 +28,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    padding: SPACING.md,
   },
   header: {
+    padding: SPACING.md,
+    paddingTop: SPACING.lg,
+  },
+  title: {
     fontSize: FONT_SIZES.heading,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  faq: {
-    marginBottom: 16,
-  },
-  q: {
-    fontSize: FONT_SIZES.body,
-    color: COLORS.secondary,
+    color: COLORS.text,
     fontWeight: 'bold',
   },
-  a: {
+  content: {
+    padding: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZES.subheading,
+    color: COLORS.text,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  text: {
     fontSize: FONT_SIZES.body,
     color: COLORS.text,
-    marginLeft: 8,
-  },
-  helpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  helpText: {
-    color: COLORS.background,
-    fontSize: FONT_SIZES.body,
-    marginLeft: 8,
-    fontWeight: 'bold',
-  },
-  videoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  videoText: {
-    color: COLORS.accent,
-    fontSize: FONT_SIZES.body,
-    marginLeft: 8,
-    fontWeight: 'bold',
-  },
-  contact: {
-    fontSize: FONT_SIZES.small,
-    color: COLORS.text,
-    marginTop: 16,
-    textAlign: 'center',
+    lineHeight: 28,
   },
 });

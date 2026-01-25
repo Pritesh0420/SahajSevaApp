@@ -1,0 +1,24 @@
+.language-toggle {
+  display: flex;
+  background-color: #EEEEEE;
+  border-radius: 20px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.language-toggle-button {
+  padding: 8px 20px;
+  border-radius: 16px;
+  background-color: transparent;
+  color: var(--color-text-light);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.language-toggle-button.active {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
