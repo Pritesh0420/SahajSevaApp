@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="D:\SahajSevaApp\Frontend\public\logo.png" alt="Sahaj Seva Logo" width="120" />
+  <img src="Frontend\public\logo.png" alt="Sahaj Seva Logo" width="120" />
   
   <h1>Sahaj Seva (सहज सेवा) 🇮🇳</h1>
   <p><b>Empowering Every Indian to Access Government Benefits with AI</b></p>
