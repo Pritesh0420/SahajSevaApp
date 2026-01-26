@@ -93,6 +93,43 @@ def get_states_meta():
     items.sort(key=lambda x: x.get("en", ""))
     return {"states": items}
 
+
+def _scheme_key(name: str) -> str:
+    raw = _norm_text_lower(name)
+    out = []
+    prev_dash = False
+    for ch in raw:
+        is_alnum = ("a" <= ch <= "z") or ("0" <= ch <= "9")
+        if is_alnum:
+            out.append(ch)
+            prev_dash = False
+        else:
+            if not prev_dash:
+                out.append("-")
+                prev_dash = True
+    key = "".join(out).strip("-")
+    return key or "scheme"
+
+
+@app.get("/api/meta/schemes")
+def get_schemes_meta():
+    items = []
+    seen = set()
+    for i, scheme in enumerate(SCHEMES):
+        en = (scheme.get("name") or "").strip()
+        hi = (scheme.get("name_hi") or "").strip()
+        base = _scheme_key(en or hi or str(i))
+        key = base
+        # Ensure unique keys even if names collide.
+        n = 2
+        while key in seen:
+            key = f"{base}-{n}"
+            n += 1
+        seen.add(key)
+        items.append({"key": key, "en": en, "hi": hi})
+    items.sort(key=lambda x: x.get("en", ""))
+    return {"schemes": items}
+
 # Map user-entered state names (English/Hindi/aliases) to our canonical keys.
 STATE_ALIASES = {
     "orissa": "odisha",
