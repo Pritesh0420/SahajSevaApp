@@ -13,6 +13,15 @@
   width: 100%;
 }
 
+.welcome-logo {
+  width: 220px;
+  height: auto;
+  display: inline-block;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  filter: drop-shadow(0 8px 24px rgba(0,0,0,0.25));
+}
+
 .welcome-title {
   font-size: 36px;
   font-weight: 700;

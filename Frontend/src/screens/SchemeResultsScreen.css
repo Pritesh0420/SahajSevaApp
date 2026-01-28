@@ -1,6 +1,6 @@
 .scheme-results-screen {
   padding: var(--spacing-lg);
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -9,6 +9,44 @@
   border-radius: var(--border-radius);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
+}
+
+.scheme-page {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--spacing-xl);
+  align-items: start;
+}
+
+.scheme-sidebar {
+  position: sticky;
+  top: var(--spacing-lg);
+}
+
+.scheme-content {
+  min-width: 0;
+}
+
+.scheme-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
+.scheme-count {
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+@media (max-width: 980px) {
+  .scheme-page {
+    grid-template-columns: 1fr;
+  }
+  .scheme-sidebar {
+    position: static;
+  }
 }
 
 .you-said-title {

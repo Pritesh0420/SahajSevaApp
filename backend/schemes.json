@@ -1,0 +1,159 @@
+[
+  {
+    "name": "PM Kisan Yojana",
+    "name_hi": "पीएम-किसान योजना",
+    "eligibility": {
+      "occupation": "farmer",
+      "income_max": 600000,
+      "state": "any"
+    },
+    "benefits": "₹6,000 per year direct benefit",
+    "benefits_hi": "₹6,000 प्रति वर्ष (सीधा लाभ)",
+    "explanation": "For small and marginal farmers with income below ₹6 lakh.",
+    "explanation_hi": "छोटे/सीमांत किसानों के लिए (वार्षिक आय ₹6 लाख से कम)।"
+  },
+  {
+    "name": "Ayushman Bharat",
+    "name_hi": "आयुष्मान भारत",
+    "eligibility": {
+      "income_max": 500000,
+      "state": "any"
+    },
+    "benefits": "Free health insurance up to ₹5 lakh",
+    "benefits_hi": "₹5 लाख तक का मुफ्त स्वास्थ्य बीमा",
+    "explanation": "For families with income below ₹5 lakh.",
+    "explanation_hi": "₹5 लाख से कम आय वाले परिवारों के लिए (सरल फ़िल्टर)।"
+  },
+  {
+    "name": "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
+    "name_hi": "प्रधानमंत्री फसल बीमा योजना (PMFBY)",
+    "eligibility": {
+      "occupation": "farmer",
+      "state": "any"
+    },
+    "benefits": "Crop insurance and compensation for crop loss",
+    "benefits_hi": "फसल बीमा और नुकसान पर मुआवज़ा",
+    "explanation": "For farmers who want to insure their crops against natural calamities and pests.",
+    "explanation_hi": "प्राकृतिक आपदा/कीट से फसल नुकसान के लिए किसानों के लिए।"
+  },
+  {
+    "name": "MGNREGA",
+    "name_hi": "मनरेगा (MGNREGA)",
+    "eligibility": {
+      "occupation": ["labour"],
+      "income_max": 300000,
+      "state": "any"
+    },
+    "benefits": "Guaranteed wage employment (up to 100 days)",
+    "benefits_hi": "गारंटीशुदा मज़दूरी रोजगार (100 दिन तक)",
+    "explanation": "For rural households seeking wage work; this quick check targets low-income daily-wage workers.",
+    "explanation_hi": "ग्रामीण परिवारों के लिए मज़दूरी काम (डेमो के लिए सरल फ़िल्टर)।"
+  },
+  {
+    "name": "Pradhan Mantri Awas Yojana (PMAY)",
+    "name_hi": "प्रधानमंत्री आवास योजना (PMAY)",
+    "eligibility": {
+      "income_max": 600000,
+      "state": "any"
+    },
+    "benefits": "Housing assistance/subsidy for eligible families",
+    "benefits_hi": "घर बनाने/खरीदने के लिए सहायता/सब्सिडी",
+    "explanation": "For lower-income households needing support to build or buy a home (income-based quick filter).",
+    "explanation_hi": "कम आय वाले परिवारों के लिए आवास सहायता (सरल आय फ़िल्टर)।"
+  },
+  {
+    "name": "Pradhan Mantri Ujjwala Yojana (PMUY)",
+    "name_hi": "प्रधानमंत्री उज्ज्वला योजना (PMUY)",
+    "eligibility": {
+      "gender": "female",
+      "income_max": 300000,
+      "state": "any"
+    },
+    "benefits": "Subsidized/free LPG connection and support",
+    "benefits_hi": "सब्सिडी/मुफ्त LPG कनेक्शन और सहायता",
+    "explanation": "For women from low-income households to get a clean cooking fuel connection.",
+    "explanation_hi": "कम आय वाले परिवारों की महिलाओं के लिए स्वच्छ ईंधन कनेक्शन।"
+  },
+  {
+    "name": "Atal Pension Yojana (APY)",
+    "name_hi": "अटल पेंशन योजना (APY)",
+    "eligibility": {
+      "age_min": 18,
+      "age_max": 40,
+      "state": "any"
+    },
+    "benefits": "Monthly pension after 60 (based on contribution)",
+    "benefits_hi": "60 के बाद मासिक पेंशन (योगदान पर आधारित)",
+    "explanation": "For people aged 18–40 who want a guaranteed pension in old age.",
+    "explanation_hi": "18–40 आयु के लोगों के लिए जो भविष्य में पेंशन चाहते हैं।"
+  },
+  {
+    "name": "National Social Assistance Programme (Old Age Pension)",
+    "name_hi": "वृद्धावस्था पेंशन (NSAP)",
+    "eligibility": {
+      "age_min": 60,
+      "income_max": 200000,
+      "state": "any"
+    },
+    "benefits": "Monthly pension support for seniors",
+    "benefits_hi": "वरिष्ठ नागरिकों के लिए मासिक पेंशन सहायता",
+    "explanation": "For senior citizens (60+) with low income (income-based quick filter).",
+    "explanation_hi": "60+ आयु और कम आय वाले वरिष्ठ नागरिकों के लिए (सरल फ़िल्टर)।"
+  },
+  {
+    "name": "National Social Assistance Programme (Widow Pension)",
+    "name_hi": "विधवा पेंशन (NSAP)",
+    "eligibility": {
+      "gender": "female",
+      "age_min": 40,
+      "income_max": 200000,
+      "state": "any"
+    },
+    "benefits": "Monthly pension support for widows",
+    "benefits_hi": "विधवा महिलाओं के लिए मासिक पेंशन सहायता",
+    "explanation": "For women aged 40+ with low income (widow status required; this is a simplified hackathon filter).",
+    "explanation_hi": "40+ आयु और कम आय वाली महिलाओं के लिए (विधवा स्थिति आवश्यक; डेमो में सरल फ़िल्टर)।"
+  },
+  {
+    "name": "National Scholarship / Post-Matric Scholarship (Quick Check)",
+    "name_hi": "छात्रवृत्ति (पोस्ट-मैट्रिक) — त्वरित जाँच",
+    "eligibility": {
+      "occupation": "student",
+      "income_max": 250000,
+      "age_max": 30,
+      "state": "any"
+    },
+    "benefits": "Financial assistance for education fees and related costs",
+    "benefits_hi": "शिक्षा शुल्क/खर्च के लिए वित्तीय सहायता",
+    "explanation": "For students from lower-income families (exact eligibility depends on category/state; simplified here for demo).",
+    "explanation_hi": "कम आय वाले परिवारों के छात्रों के लिए (पात्रता श्रेणी/राज्य पर निर्भर; डेमो में सरल)।"
+  },
+  {
+    "name": "Mukhyamantri Ladli Behna Yojana (Madhya Pradesh)",
+    "name_hi": "मुख्यमंत्री लाड़ली बहना योजना (मध्य प्रदेश)",
+    "eligibility": {
+      "state": "madhya pradesh",
+      "gender": "female",
+      "age_min": 21,
+      "age_max": 60,
+      "income_max": 250000
+    },
+    "benefits": "Monthly financial assistance for eligible women (state scheme)",
+    "benefits_hi": "पात्र महिलाओं के लिए मासिक वित्तीय सहायता (राज्य योजना)",
+    "explanation": "For women in Madhya Pradesh (21–60) from lower-income households (simplified quick filter for demo).",
+    "explanation_hi": "मध्य प्रदेश की महिलाओं (21–60) के लिए (डेमो में सरल आय फ़िल्टर)।"
+  },
+  {
+    "name": "Delhi Old Age Pension (State Scheme)",
+    "name_hi": "दिल्ली वृद्धावस्था पेंशन (राज्य योजना)",
+    "eligibility": {
+      "state": "delhi",
+      "age_min": 60,
+      "income_max": 300000
+    },
+    "benefits": "Monthly pension support for eligible senior citizens in Delhi",
+    "benefits_hi": "दिल्ली में पात्र वरिष्ठ नागरिकों के लिए मासिक पेंशन सहायता",
+    "explanation": "For seniors in Delhi (60+) with low income (simplified quick filter for demo).",
+    "explanation_hi": "दिल्ली के 60+ आयु के वरिष्ठ नागरिकों के लिए (डेमो में सरल आय फ़िल्टर)।"
+  }
+]

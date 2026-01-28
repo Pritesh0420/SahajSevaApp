@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '../LanguageContext';
 import './HistoryScreen.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const MicIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -15,20 +17,100 @@ const DocumentIcon = () => (
   </svg>
 );
 
-const mockHistory = [
-  { id: '1', type: 'scheme', title: 'PM-KISAN Eligibility Check', date: '20 Jan 2024', icon: 'mic' },
-  { id: '2', type: 'form', title: 'Ration Card Application', date: '19 Jan 2024', icon: 'document' },
-  { id: '3', type: 'scheme', title: 'Ayushman Bharat Search', date: '18 Jan 2024', icon: 'mic' },
-  { id: '4', type: 'form', title: 'Pension Form', date: '15 Jan 2024', icon: 'document' },
+const FORMS = [
+  {
+    id: 'form-ration-card',
+    type: 'form',
+    icon: 'document',
+    title_en: 'Ration Card Application',
+    title_hi: 'राशन कार्ड आवेदन',
+  },
+  {
+    id: 'form-pension',
+    type: 'form',
+    icon: 'document',
+    title_en: 'Pension Form',
+    title_hi: 'पेंशन फॉर्म',
+  },
 ];
+
+function formatDate(date, language) {
+  const locale = language === 'hi' ? 'hi-IN' : 'en-GB';
+  return new Intl.DateTimeFormat(locale, {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
 
 export default function HistoryScreen() {
   const { language } = useLanguage();
   const [filter, setFilter] = useState('all');
 
-  const filteredHistory = filter === 'all' 
-    ? mockHistory 
-    : mockHistory.filter(item => item.type === filter);
+  const [schemesMeta, setSchemesMeta] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/meta/schemes`);
+        const data = await res.json();
+        if (cancelled) return;
+        setSchemesMeta(Array.isArray(data.schemes) ? data.schemes : []);
+      } catch {
+        if (!cancelled) setSchemesMeta([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const schemeItems = useMemo(() => {
+    const now = Date.now();
+    return schemesMeta.map((s, idx) => {
+      const title = language === 'hi'
+        ? (s.hi || s.en || '')
+        : (s.en || s.hi || '');
+      // Create a descending set of dates for a "history" feel.
+      const dt = new Date(now - idx * 24 * 60 * 60 * 1000);
+      return {
+        id: `scheme-${s.key || idx}`,
+        type: 'scheme',
+        icon: 'mic',
+        title,
+        date: formatDate(dt, language),
+      };
+    });
+  }, [language, schemesMeta]);
+
+  const formItems = useMemo(() => {
+    const now = Date.now();
+    return FORMS.map((f, idx) => {
+      const dt = new Date(now - (schemesMeta.length + idx + 1) * 24 * 60 * 60 * 1000);
+      return {
+        id: f.id,
+        type: 'form',
+        icon: f.icon,
+        title: language === 'hi' ? f.title_hi : f.title_en,
+        date: formatDate(dt, language),
+      };
+    });
+  }, [language, schemesMeta.length]);
+
+  const allItems = useMemo(() => {
+    const combined = [...schemeItems, ...formItems];
+    // Dates are strings; sorting isn't critical here, but keep schemes first for now.
+    return combined;
+  }, [formItems, schemeItems]);
+
+  const filteredHistory = filter === 'all'
+    ? allItems
+    : allItems.filter(item => item.type === filter);
 
   return (
     <div className="history-screen">
@@ -58,7 +140,19 @@ export default function HistoryScreen() {
       </div>
 
       <div className="history-list">
-        {filteredHistory.map((item) => (
+        {loading ? (
+          <div className="history-item" style={{ justifyContent: 'center', color: 'var(--color-text-light)' }}>
+            {language === 'hi' ? 'लोड हो रहा है...' : 'Loading...'}
+          </div>
+        ) : null}
+
+        {!loading && filteredHistory.length === 0 ? (
+          <div className="history-item" style={{ justifyContent: 'center', color: 'var(--color-text-light)' }}>
+            {language === 'hi' ? 'कोई आइटम नहीं' : 'No items'}
+          </div>
+        ) : null}
+
+        {!loading && filteredHistory.map((item) => (
           <div key={item.id} className="history-item">
             <div className={`history-icon ${item.type}`}>
               {item.icon === 'mic' ? <MicIcon /> : <DocumentIcon />}
