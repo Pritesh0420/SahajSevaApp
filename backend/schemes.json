@@ -184,7 +184,7 @@
   {
     "name": "Pradhan Mantri Kaushal Vikas Yojana (PMKVY)",
     "name_hi": "प्रधानमंत्री कौशल विकास योजना",
-    "portal_url": "https://www.pmkvyofficial.org/",
+    "portal_url": "https://www.myscheme.gov.in/search?search=Pradhan%20Mantri%20Kaushal%20Vikas%20Yojana",
     "eligibility": {
       "age_min": 18,
       "age_max": 35,
@@ -244,7 +244,7 @@
   {
     "name": "Beti Bachao Beti Padhao Yojana",
     "name_hi": "बेटी बचाओ बेटी पढ़ाओ योजना",
-    "portal_url": "https://wcd.nic.in/bbbp-schemes",
+    "portal_url": "https://www.myscheme.gov.in/search?search=Beti%20Bachao%20Beti%20Padhao",
     "eligibility": {
       "gender": "female",
       "age_max": 18,

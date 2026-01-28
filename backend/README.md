@@ -14,6 +14,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
+## Environment variables
+
+- `GOOGLE_API_KEY` (optional): If set and quota is available, `/api/analyze-form` will use Google's Gemini model to analyze forms.
+- `ALLOW_ANALYZE_WITHOUT_LLM` (default `true`): If `true`, `/api/analyze-form` will return a best-effort fallback response when the LLM is unavailable (missing key, invalid key, quota exceeded, etc.) instead of returning HTTP 500.
+
 Or using uvicorn directly:
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -23,43 +28,29 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 - **GET /** - API information
 - **GET /health** - Health check
+- **POST /api/analyze-form** - Analyze uploaded PDF/image form and generate voice explanation
+  - Parameters: `file` (form document), `language` (optional, default: "en")
+  - Supports: en, hi, mr, ta, te, bn, gu, kn, ml, pa
+  - Returns: Form analysis + voice note in selected language
 - **GET /api/schemes** - Get all schemes
 - **POST /api/schemes/match** - Match schemes to user profile
 - **GET /api/schemes/{scheme_id}** - Get specific scheme
-- **POST /api/analyze-form** - Analyze uploaded form
 - **POST /api/tts** - Text-to-speech (placeholder)
 - **POST /api/stt** - Speech-to-text (placeholder)
 
-## AI Integration (OpenAI / Gemini)
+## Features
 
-This backend supports AI in two places:
+### Multilingual Voice Notes
+When a form is uploaded, the system:
+1. Scans the PDF/image document
+2. Extracts text using OCR (for images) or direct extraction (for PDFs)
+3. Analyzes the form structure using Google Gemini AI
+4. Creates a voice note in the selected language explaining:
+   - What the form is about
+   - The purpose of the form
+   - Asks if the user wants to continue filling it
 
-- **Profile extraction** from the spoken transcript: `POST /api/profile/extract`
-- **Simple eligibility explanation** per scheme in the selected language: `POST /api/scheme-finder`
-
-### State coverage (hackathon-safe)
-
-State-wise schemes vary a lot across India. Instead of hardcoding hundreds of state programs, `POST /api/scheme-finder` automatically appends a **state-specific “Official Portal” suggestion** when a recognized `state` is present. This keeps the demo reliable while still feeling personalized.
-
-### Enable an AI provider
-
-By default, the backend runs in **no-AI mode** (rule-based fallback). To enable AI, set environment variables:
-
-**OpenAI**
-
-- `SAHAJSEVA_AI_PROVIDER=openai`
-- `OPENAI_API_KEY=...`
-- (optional) `OPENAI_MODEL=gpt-4o-mini`
-
-**Gemini**
-
-- `SAHAJSEVA_AI_PROVIDER=gemini`
-- `GEMINI_API_KEY=...`
-- (optional) `GEMINI_MODEL=gemini-1.5-flash`
-
-Notes:
-- Languages are intentionally limited to **English (`en`) and Hindi (`hi`)**.
-- If the provider is misconfigured or the SDK is missing, the server falls back safely to rule-based logic.
+See [USAGE.md](USAGE.md) for detailed examples.
 
 ## API Documentation
 
