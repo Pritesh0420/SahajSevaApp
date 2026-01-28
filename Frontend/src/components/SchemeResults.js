@@ -1,4 +1,5 @@
 import React from "react";
+import { addSchemeToHistory } from "../utils/historyManager";
 
 export default function SchemeResults({ schemes, language = "en" }) {
   const TEXT = {
@@ -46,6 +47,7 @@ export default function SchemeResults({ schemes, language = "en" }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="apply-button"
+                onClick={() => addSchemeToHistory(s)}
               >
                 {t.applyNow}
               </a>

@@ -56,7 +56,7 @@
   {
     "name": "Pradhan Mantri Awas Yojana - Gramin (PMAY-G)",
     "name_hi": "प्रधानमंत्री आवास योजना - ग्रामीण",
-    "portal_url": "https://pmayg.nic.in/",
+    "portal_url": "https://pmaymis.gov.in/",
     "eligibility": {
       "income_max": 600000,
       "state": "any"
@@ -83,7 +83,7 @@
   {
     "name": "Atal Pension Yojana (APY)",
     "name_hi": "अटल पेंशन योजना",
-    "portal_url": "https://www.npscra.nsdl.co.in/scheme-details.php",
+    "portal_url": "https://www.myscheme.gov.in/schemes/apy",
     "eligibility": {
       "age_min": 18,
       "age_max": 40,
@@ -155,7 +155,7 @@
   {
     "name": "Pradhan Mantri Matru Vandana Yojana (PMMVY)",
     "name_hi": "प्रधानमंत्री मातृ वंदना योजना",
-    "portal_url": "https://wcd.nic.in/schemes/pradhan-mantri-matru-vandana-yojana",
+    "portal_url": "https://www.myscheme.gov.in/schemes/pmmvy",
     "eligibility": {
       "gender": "female",
       "age_min": 19,
@@ -170,7 +170,7 @@
   {
     "name": "Sukanya Samriddhi Yojana (SSY)",
     "name_hi": "सुकन्या समृद्धि योजना",
-    "portal_url": "https://www.india.gov.in/sukanya-samriddhi-yojana",
+    "portal_url": "https://www.indiapost.gov.in/Financial/Pages/Content/Post-Office-Saving-Schemes.aspx",
     "eligibility": {
       "gender": "female",
       "age_max": 10,
@@ -184,7 +184,7 @@
   {
     "name": "Pradhan Mantri Kaushal Vikas Yojana (PMKVY)",
     "name_hi": "प्रधानमंत्री कौशल विकास योजना",
-    "portal_url": "https://www.myscheme.gov.in/search?search=Pradhan%20Mantri%20Kaushal%20Vikas%20Yojana",
+    "portal_url": "https://www.skillindiadigital.gov.in/",
     "eligibility": {
       "age_min": 18,
       "age_max": 35,
@@ -214,7 +214,7 @@
   {
     "name": "Rashtriya Swasthya Bima Yojana (RSBY)",
     "name_hi": "राष्ट्रीय स्वास्थ्य बीमा योजना",
-    "portal_url": "https://www.india.gov.in/rashtriya-swasthya-bima-yojana-rsby",
+    "portal_url": "https://www.india.gov.in/",
     "eligibility": {
       "income_max": 300000,
       "occupation": ["labour", "other"],
@@ -244,7 +244,7 @@
   {
     "name": "Beti Bachao Beti Padhao Yojana",
     "name_hi": "बेटी बचाओ बेटी पढ़ाओ योजना",
-    "portal_url": "https://www.myscheme.gov.in/search?search=Beti%20Bachao%20Beti%20Padhao",
+    "portal_url": "https://www.myscheme.gov.in/schemes/bbbp",
     "eligibility": {
       "gender": "female",
       "age_max": 18,

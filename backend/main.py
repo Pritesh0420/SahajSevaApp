@@ -2,33 +2,78 @@ import os
 import uuid
 import json
 import re
+import unicodedata
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from google import genai
-from google.genai import types
-from gtts import gTTS
-from langdetect import detect
-from langdetect.lang_detect_exception import LangDetectException
-from googletrans import Translator
+from ai_providers import get_ai_client
+from scheme_models import (
+    ExtractProfileRequest,
+    ExtractProfileResponse,
+    SchemeFinderRequest,
+    SchemeFinderResponse,
+)
+
+try:
+    from google import genai  # type: ignore
+    from google.genai import types  # type: ignore
+except Exception:  # pragma: no cover
+    genai = None
+    types = None
+
+try:
+    from gtts import gTTS  # type: ignore
+except Exception:  # pragma: no cover
+    gTTS = None
+
+try:
+    from langdetect import detect  # type: ignore
+    from langdetect.lang_detect_exception import LangDetectException  # type: ignore
+except Exception:  # pragma: no cover
+    detect = None
+    LangDetectException = Exception
+
+try:
+    from googletrans import Translator  # type: ignore
+except Exception:  # pragma: no cover
+    Translator = None
 import uvicorn
 
-import pdfplumber
-import pytesseract
-from PIL import Image
+try:
+    import pdfplumber  # type: ignore
+except Exception:  # pragma: no cover
+    pdfplumber = None
+
+try:
+    import pytesseract  # type: ignore
+except Exception:  # pragma: no cover
+    pytesseract = None
+
+try:
+    from PIL import Image  # type: ignore
+except Exception:  # pragma: no cover
+    Image = None
 
 # ---------------- ENV + GOOGLE GEMINI ----------------
 load_dotenv()
 
+# Config: Toggle between curated schemes vs. future API mode
+USE_CURATED_SCHEMES = os.getenv("USE_CURATED_SCHEMES", "true").lower() == "true"
+
+# Curated schemes dataset (kept for reliability and as fallback)
+SCHEMES_PATH = os.path.join(os.path.dirname(__file__), "schemes.json")
+with open(SCHEMES_PATH, "r", encoding="utf-8") as f:
+    SCHEMES = json.load(f)
+
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if GOOGLE_API_KEY:
+if GOOGLE_API_KEY and genai is not None:
     client = genai.Client(api_key=GOOGLE_API_KEY)
-    MODEL_NAME = 'gemini-1.5-flash'
+    MODEL_NAME = "gemini-1.5-flash"
 else:
     client = None
     MODEL_NAME = None
@@ -515,11 +560,29 @@ def extract_text_from_file(path: str, ext: str) -> str:
     text = ""
 
     if ext == "pdf":
+        if pdfplumber is None:
+            raise HTTPException(
+                status_code=501,
+                detail={
+                    "code": "pdf_support_not_installed",
+                    "message": "PDF text extraction is not available on this server.",
+                    "how_to_fix": "Install optional dependencies: pip install -r Backend/requirements-optional.txt",
+                },
+            )
         with pdfplumber.open(path) as pdf:
             for page in pdf.pages:
                 text += page.extract_text() or ""
 
     elif ext in ["png", "jpg", "jpeg"]:
+        if Image is None or pytesseract is None:
+            raise HTTPException(
+                status_code=501,
+                detail={
+                    "code": "image_ocr_not_installed",
+                    "message": "Image OCR is not available on this server.",
+                    "how_to_fix": "Install optional dependencies: pip install -r Backend/requirements-optional.txt (and install Tesseract OCR on the machine)",
+                },
+            )
         image = Image.open(path)
         text = pytesseract.image_to_string(image)
 
@@ -532,7 +595,43 @@ def extract_text_from_file(path: str, ext: str) -> str:
     return text
 
 
-def _basic_field_guess_from_text(extracted_text: str, max_fields: int = 25) -> List[FormField]:
+def _is_likely_hindi(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return False
+    # Devanagari block (Hindi)
+    return any("\u0900" <= ch <= "\u097F" for ch in t)
+
+
+def _localize_fallback_strings(language: str) -> dict:
+    lang = (language or "en").strip().lower()
+    if lang == "hi":
+        return {
+            "purpose": "यह फॉर्म आपको निम्नलिखित जानकारी भरने के लिए कहता है।",
+            "eligibility": "कृपया पात्रता मानदंड के लिए फॉर्म देखें।",
+            "warnings": [
+                "कृपया फॉर्म को भरने से पहले ध्यान से पढ़ें।",
+                "सुनिश्चित करें कि सभी जानकारी सही है।",
+            ],
+            "provide_prefix": "कृपया ",
+            "provide_suffix": " प्रदान करें",
+            "upload_suffix": " अपलोड करें",
+        }
+
+    return {
+        "purpose": "This form requires you to fill in the following information.",
+        "eligibility": "Please check the form for eligibility criteria.",
+        "warnings": [
+            "Please read the form carefully before filling.",
+            "Ensure all required information is accurate.",
+        ],
+        "provide_prefix": "Please provide your ",
+        "provide_suffix": "",
+        "upload_suffix": "",
+    }
+
+
+def _basic_field_guess_from_text(extracted_text: str, *, language: str, max_fields: int = 25) -> List[FormField]:
     fields: List[FormField] = []
     seen = set()
 
@@ -544,7 +643,19 @@ def _basic_field_guess_from_text(extracted_text: str, max_fields: int = 25) -> L
     ]
     
     # Photo field keywords
-    photo_keywords = ['photo', 'photograph', 'image', 'picture', 'pic']
+    photo_keywords = [
+        "photo",
+        "photograph",
+        "image",
+        "picture",
+        "pic",
+        "फोटो",
+        "छवि",
+        "चित्र",
+        "प्रकाशचित्र",
+    ]
+
+    strings = _localize_fallback_strings(language)
 
     for raw_line in extracted_text.splitlines():
         line = re.sub(r"\s+", " ", raw_line).strip()
@@ -574,14 +685,30 @@ def _basic_field_guess_from_text(extracted_text: str, max_fields: int = 25) -> L
                 seen.add(candidate_name.lower())
                 
                 # Detect if this is a photo/image field
-                field_type = "photo" if any(keyword in candidate_name.lower() for keyword in photo_keywords) else "text"
+                lower_name = candidate_name.lower()
+                field_type = "photo" if any(keyword in lower_name for keyword in photo_keywords) else "text"
+
+                # Localize description (and optionally field name) for Hindi mode
+                if (language or "").strip().lower() == "hi":
+                    display_name = candidate_name
+                    if not _is_likely_hindi(display_name):
+                        display_name = _translate_text(display_name, "hi")
+
+                    if field_type == "photo":
+                        description = f"{strings['provide_prefix']}{display_name}{strings['upload_suffix']}"
+                    else:
+                        description = f"{strings['provide_prefix']}{display_name}{strings['provide_suffix']}"
+                    field_name_out = display_name
+                else:
+                    description = f"{strings['provide_prefix']}{candidate_name.lower()}{strings['provide_suffix']}"
+                    field_name_out = candidate_name
 
                 fields.append(
                     FormField(
-                        field_name=candidate_name,
+                        field_name=field_name_out,
                         field_type=field_type,
                         required=False,
-                        description=f"Please provide your {candidate_name.lower()}",
+                        description=description,
                         example="",
                     )
                 )
@@ -594,14 +721,17 @@ def _basic_field_guess_from_text(extracted_text: str, max_fields: int = 25) -> L
             field_name="Information",
             field_type="text",
             required=False,
-            description="Please provide required information",
+            description=(
+                "कृपया आवश्यक जानकारी प्रदान करें" if (language or "").strip().lower() == "hi" else "Please provide required information"
+            ),
             example=""
         )
     ]
 
 
-def _fallback_form_analysis(extracted_text: str, original_filename: str) -> FormAnalysis:
-    guessed_fields = _basic_field_guess_from_text(extracted_text)
+def _fallback_form_analysis(extracted_text: str, original_filename: str, *, language: str) -> FormAnalysis:
+    strings = _localize_fallback_strings(language)
+    guessed_fields = _basic_field_guess_from_text(extracted_text, language=language)
     
     # Try to extract form name from text
     form_name = "Application Form"
@@ -612,22 +742,21 @@ def _fallback_form_analysis(extracted_text: str, original_filename: str) -> Form
             break
     
     # Basic purpose extraction
-    purpose = "This form requires you to fill in the following information"
-    if 'application' in extracted_text.lower():
-        purpose = "This is an application form that requires your personal and relevant information"
-    elif 'registration' in extracted_text.lower():
-        purpose = "This is a registration form"
+    purpose = strings["purpose"]
+    t_lower = (extracted_text or "").lower()
+    if (language or "").strip().lower() == "en":
+        if "application" in t_lower:
+            purpose = "This is an application form that requires your personal and relevant information."
+        elif "registration" in t_lower:
+            purpose = "This is a registration form."
     
     return FormAnalysis(
         form_id=str(uuid.uuid4()),
         form_name=form_name,
         purpose=purpose,
-        eligibility="Please check the form for eligibility criteria",
+        eligibility=strings["eligibility"],
         fields=guessed_fields,
-        warnings=[
-            "Please read the form carefully before filling",
-            "Ensure all required information is accurate",
-        ],
+        warnings=strings["warnings"],
     )
 
 
@@ -635,22 +764,38 @@ def _translate_text(text: str, target_lang: str) -> str:
     """Translate text to target language."""
     if not text or target_lang == "en":
         return text
-    
+
+    # Prefer googletrans if present
+    if Translator is not None:
+        try:
+            translator = Translator()
+            result = translator.translate(text, dest=target_lang)
+            return result.text
+        except Exception as e:
+            print(f"Translation error (googletrans): {e}")
+
+    # Fallback: deep-translator
     try:
-        translator = Translator()
-        result = translator.translate(text, dest=target_lang)
-        return result.text
+        from deep_translator import GoogleTranslator  # type: ignore
+
+        return GoogleTranslator(source="auto", target=target_lang).translate(text)
     except Exception as e:
-        print(f"Translation error: {e}")
+        print(f"Translation error (deep-translator): {e}")
         return text  # Return original if translation fails
+
+
+def _maybe_translate(text: str, target_lang: str) -> str:
+    if target_lang == "hi" and _is_likely_hindi(text):
+        return text
+    return _translate_text(text, target_lang)
 
 
 def _create_intro_text(form_name: str, purpose: str, fields: List[dict], lang: str) -> str:
     """Create a comprehensive introduction that explains form details and all fields."""
     
     # Translate form name and purpose to selected language
-    translated_form_name = _translate_text(form_name, lang)
-    translated_purpose = _translate_text(purpose, lang)
+    translated_form_name = _maybe_translate(form_name, lang)
+    translated_purpose = _maybe_translate(purpose, lang)
     
     # Build field list description
     field_names = [f['field_name'] for f in fields] if fields else []
@@ -659,8 +804,8 @@ def _create_intro_text(form_name: str, purpose: str, fields: List[dict], lang: s
         intro = f"यह दस्तावेज़ {translated_form_name} है। {translated_purpose}\n\n"
         intro += "इस फॉर्म में निम्नलिखित जानकारी की आवश्यकता है:\n"
         for i, field in enumerate(fields[:10], 1):  # Limit to 10 for voice clarity
-            translated_field_name = _translate_text(field['field_name'], lang)
-            translated_description = _translate_text(field.get('description', ''), lang)
+            translated_field_name = _maybe_translate(field['field_name'], lang)
+            translated_description = _maybe_translate(field.get('description', ''), lang)
             intro += f"{i}. {translated_field_name} - {translated_description}\n"
         if len(fields) > 10:
             intro += f"और {len(fields) - 10} अधिक फील्ड्स।\n"
@@ -722,14 +867,65 @@ async def analyze_form(
     language: str = Form(default="en")  # Language code: 'en', 'hi', 'mr', 'ta', etc.
 ):
     try:
-        ext = file.filename.split(".")[-1].lower()
+        # Determine file extension reliably (some uploads may not include an extension).
+        filename_in = (file.filename or "").strip()
+        ext = ""
+        if "." in filename_in:
+            ext = filename_in.rsplit(".", 1)[-1].lower().strip()
+
+        if ext not in {"pdf", "png", "jpg", "jpeg"}:
+            ctype = (file.content_type or "").lower().strip()
+            if ctype == "application/pdf":
+                ext = "pdf"
+            elif ctype == "image/png":
+                ext = "png"
+            elif ctype in {"image/jpeg", "image/jpg"}:
+                ext = "jpg"
+
+        if ext not in {"pdf", "png", "jpg", "jpeg"}:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "unsupported_file_type",
+                    "message": "Only PDF, PNG, JPG, JPEG files allowed.",
+                    "received_filename": filename_in,
+                    "received_content_type": file.content_type,
+                },
+            )
+
         filename = f"{uuid.uuid4()}.{ext}"
         path = os.path.join(UPLOAD_DIR, filename)
 
         with open(path, "wb") as f:
             f.write(await file.read())
 
-        extracted_text = extract_text_from_file(path, ext)
+        try:
+            extracted_text = extract_text_from_file(path, ext)
+        except HTTPException as he:
+            # If extraction fails due to lack of text (common for scanned PDFs), fall back
+            # instead of failing the whole request.
+            if he.status_code == 400:
+                extracted_text = ""
+            else:
+                raise
+
+        if not (extracted_text or "").strip():
+            # Keep UX smooth: return a minimal analysis rather than a hard failure.
+            result_json = _fallback_form_analysis("", file.filename, language=language).model_dump()
+            intro_text = _create_intro_text(
+                result_json.get("form_name", "Form"),
+                result_json.get("purpose", ""),
+                result_json.get("fields", []),
+                language,
+            )
+            voice_note_url, lang = _create_voice_note(intro_text, language)
+            return {
+                "form_analysis": result_json,
+                "voice_note_url": voice_note_url,
+                "language_detected": lang,
+                "fallback": True,
+                "warning": "Could not extract readable text from the document; using fallback form analysis.",
+            }
 
         if client is None:
             if not ALLOW_ANALYZE_WITHOUT_LLM:
@@ -741,7 +937,7 @@ async def analyze_form(
                     },
                 )
 
-            result_json = _fallback_form_analysis(extracted_text, file.filename).model_dump()
+            result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
             
             # Create introductory voice note in selected language
             intro_text = _create_intro_text(
@@ -809,7 +1005,7 @@ FORM TEXT:
                             "provider_error": str(e),
                         },
                     )
-                result_json = _fallback_form_analysis(extracted_text, file.filename).model_dump()
+                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
                 intro_text = _create_intro_text(
                     result_json.get("form_name", "Form"), 
                     result_json.get("purpose", ""), 
@@ -830,7 +1026,7 @@ FORM TEXT:
                             "provider_error": str(e),
                         },
                     )
-                result_json = _fallback_form_analysis(extracted_text, file.filename).model_dump()
+                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
                 intro_text = _create_intro_text(
                     result_json.get("form_name", "Form"), 
                     result_json.get("purpose", ""), 
@@ -851,7 +1047,7 @@ FORM TEXT:
                             "provider_error": str(e),
                         },
                     )
-                result_json = _fallback_form_analysis(extracted_text, file.filename).model_dump()
+                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
                 intro_text = _create_intro_text(
                     result_json.get("form_name", "Form"), 
                     result_json.get("purpose", ""), 
@@ -874,7 +1070,7 @@ FORM TEXT:
             result_json = json.loads(result_text)
         except Exception as e:
             if ALLOW_ANALYZE_WITHOUT_LLM:
-                result_json = _fallback_form_analysis(extracted_text, file.filename).model_dump()
+                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
                 intro_text = _create_intro_text(
                     result_json.get("form_name", "Form"), 
                     result_json.get("purpose", ""), 
@@ -932,9 +1128,18 @@ FORM TEXT:
             "language_detected": lang
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         print("🔥 ERROR:", e)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "analyze_form_failed",
+                "message": "Unexpected server error while analyzing the form.",
+                "provider_error": str(e),
+            },
+        )
 
 
 # 🔹 START FORM FILLING CONVERSATION

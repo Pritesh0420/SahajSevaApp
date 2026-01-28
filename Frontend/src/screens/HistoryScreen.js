@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../LanguageContext';
+import { getHistory } from '../utils/historyManager';
 import './HistoryScreen.css';
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const MicIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -17,25 +16,27 @@ const DocumentIcon = () => (
   </svg>
 );
 
-const FORMS = [
-  {
-    id: 'form-ration-card',
-    type: 'form',
-    icon: 'document',
-    title_en: 'Ration Card Application',
-    title_hi: 'राशन कार्ड आवेदन',
-  },
-  {
-    id: 'form-pension',
-    type: 'form',
-    icon: 'document',
-    title_en: 'Pension Form',
-    title_hi: 'पेंशन फॉर्म',
-  },
-];
-
-function formatDate(date, language) {
+function formatDate(timestamp, language) {
   const locale = language === 'hi' ? 'hi-IN' : 'en-GB';
+  const date = new Date(timestamp);
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  // Show relative time for recent items
+  if (diffHours < 1) {
+    return language === 'hi' ? 'अभी' : 'Just now';
+  } else if (diffHours < 24) {
+    return language === 'hi' 
+      ? `${diffHours} घंटे पहले`
+      : `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  } else if (diffDays < 7) {
+    return language === 'hi'
+      ? `${diffDays} दिन पहले`
+      : `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  }
+
   return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
@@ -46,71 +47,25 @@ function formatDate(date, language) {
 export default function HistoryScreen() {
   const { language } = useLanguage();
   const [filter, setFilter] = useState('all');
-
-  const [schemesMeta, setSchemesMeta] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [historyItems, setHistoryItems] = useState([]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/meta/schemes`);
-        const data = await res.json();
-        if (cancelled) return;
-        setSchemesMeta(Array.isArray(data.schemes) ? data.schemes : []);
-      } catch {
-        if (!cancelled) setSchemesMeta([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const schemeItems = useMemo(() => {
-    const now = Date.now();
-    return schemesMeta.map((s, idx) => {
-      const title = language === 'hi'
-        ? (s.hi || s.en || '')
-        : (s.en || s.hi || '');
-      // Create a descending set of dates for a "history" feel.
-      const dt = new Date(now - idx * 24 * 60 * 60 * 1000);
-      return {
-        id: `scheme-${s.key || idx}`,
-        type: 'scheme',
-        icon: 'mic',
-        title,
-        date: formatDate(dt, language),
-      };
-    });
-  }, [language, schemesMeta]);
-
-  const formItems = useMemo(() => {
-    const now = Date.now();
-    return FORMS.map((f, idx) => {
-      const dt = new Date(now - (schemesMeta.length + idx + 1) * 24 * 60 * 60 * 1000);
-      return {
-        id: f.id,
-        type: 'form',
-        icon: f.icon,
-        title: language === 'hi' ? f.title_hi : f.title_en,
-        date: formatDate(dt, language),
-      };
-    });
-  }, [language, schemesMeta.length]);
-
-  const allItems = useMemo(() => {
-    const combined = [...schemeItems, ...formItems];
-    // Dates are strings; sorting isn't critical here, but keep schemes first for now.
-    return combined;
-  }, [formItems, schemeItems]);
+    // Load history from localStorage
+    const history = getHistory();
+    const items = history.map(item => ({
+      id: item.id,
+      type: item.type,
+      icon: item.type === 'scheme' ? 'mic' : 'document',
+      title: item.type === 'scheme' ? item.schemeName : (item.fileName || item.formName || 'Form'),
+      date: formatDate(item.timestamp, language),
+      timestamp: item.timestamp,
+    }));
+    setHistoryItems(items);
+  }, [language]);
 
   const filteredHistory = filter === 'all'
-    ? allItems
-    : allItems.filter(item => item.type === filter);
+    ? historyItems
+    : historyItems.filter(item => item.type === filter);
 
   return (
     <div className="history-screen">
@@ -140,19 +95,23 @@ export default function HistoryScreen() {
       </div>
 
       <div className="history-list">
-        {loading ? (
-          <div className="history-item" style={{ justifyContent: 'center', color: 'var(--color-text-light)' }}>
-            {language === 'hi' ? 'लोड हो रहा है...' : 'Loading...'}
+        {filteredHistory.length === 0 ? (
+          <div className="history-empty">
+            <div className="empty-icon">📋</div>
+            <p className="empty-text">
+              {language === 'hi' 
+                ? 'अभी तक कोई इतिहास नहीं है' 
+                : 'No history yet'}
+            </p>
+            <p className="empty-subtext">
+              {language === 'hi'
+                ? 'योजनाएं देखें या फॉर्म अपलोड करें'
+                : 'View schemes or upload forms to see them here'}
+            </p>
           </div>
         ) : null}
 
-        {!loading && filteredHistory.length === 0 ? (
-          <div className="history-item" style={{ justifyContent: 'center', color: 'var(--color-text-light)' }}>
-            {language === 'hi' ? 'कोई आइटम नहीं' : 'No items'}
-          </div>
-        ) : null}
-
-        {!loading && filteredHistory.map((item) => (
+        {filteredHistory.map((item) => (
           <div key={item.id} className="history-item">
             <div className={`history-icon ${item.type}`}>
               {item.icon === 'mic' ? <MicIcon /> : <DocumentIcon />}

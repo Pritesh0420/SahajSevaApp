@@ -1,15 +1,9 @@
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-python-multipart==0.0.6
-pillow==10.2.0
-python-dotenv==1.0.0
-google-genai==0.2.2
-pdfplumber==0.11.0
-pytesseract==0.3.10
-gtts==2.5.0
-langdetect==1.0.9
-reportlab==4.0.9
-SpeechRecognition==3.10.0
-pydub==0.25.1
-googletrans==4.0.0-rc1
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.8.0
+python-multipart>=0.0.6
+httpx>=0.27.0
+
+# Optional (enable by setting SAHAJSEVA_AI_PROVIDER=openai or gemini)
+openai>=1.57.4
+google-generativeai>=0.8.3

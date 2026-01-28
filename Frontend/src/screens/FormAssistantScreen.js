@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useLanguage } from '../LanguageContext';
+import { addFormToHistory } from '../utils/historyManager';
 import BigButton from '../components/BigButton';
 import './FormAssistantScreen.css';
 
@@ -57,11 +58,30 @@ export default function FormAssistantScreen() {
       });
 
       if (!res.ok) {
-        throw new Error("Server error");
+        let detailText = "";
+        try {
+          const maybeJson = await res.json();
+          detailText =
+            (typeof maybeJson?.detail === 'string' ? maybeJson.detail : '') ||
+            (typeof maybeJson?.detail?.message === 'string' ? maybeJson.detail.message : '') ||
+            (typeof maybeJson?.message === 'string' ? maybeJson.message : '') ||
+            JSON.stringify(maybeJson);
+        } catch {
+          try {
+            detailText = await res.text();
+          } catch {
+            detailText = '';
+          }
+        }
+        const msg = detailText ? `Server error (${res.status}): ${detailText}` : `Server error (${res.status})`;
+        throw new Error(msg);
       }
 
       const data = await res.json();
       console.log("AI Result:", data);
+      
+      // Add to history when form is successfully uploaded
+      addFormToHistory('Form Analysis', file.name);
       
       setSessionId(data.session_id);
       setFormAnalysis(data.form_analysis);
@@ -72,7 +92,8 @@ export default function FormAssistantScreen() {
 
     } catch (err) {
       console.error(err);
-      setError(language === 'hi' ? 'अपलोड विफल रहा' : 'Upload failed');
+      const fallbackMsg = language === 'hi' ? 'अपलोड विफल रहा' : 'Upload failed';
+      setError(err?.message || fallbackMsg);
     } finally {
       setLoading(false);
     }
