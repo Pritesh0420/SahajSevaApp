@@ -33,6 +33,7 @@ class SchemeResult(BaseModel):
     name: str
     benefits: str
     why: str
+    portal_url: str = ""
 
 
 class SchemeFinderResponse(BaseModel):

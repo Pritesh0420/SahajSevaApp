@@ -85,6 +85,7 @@
 .scheme-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
 }
@@ -99,6 +100,30 @@
   font-weight: 600;
   color: var(--color-text);
   margin: 0;
+  flex: 1;
+}
+
+.apply-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--color-primary);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.apply-button:hover {
+  background-color: #3d6647;
+  transform: translateY(-1px);
+}
+
+.apply-button:active {
+  transform: translateY(0);
 }
 
 .scheme-detail {
@@ -122,4 +147,56 @@
 .detail-value.benefit {
   color: var(--color-primary);
   font-weight: 600;
+}
+
+/* MyScheme Portal Section */
+.myscheme-section {
+  margin-top: var(--spacing-xl);
+  padding-top: var(--spacing-xl);
+  border-top: 2px dashed #E0E0E0;
+}
+
+.myscheme-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-xl);
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.myscheme-title {
+  font-size: var(--font-size-subheading);
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 var(--spacing-sm) 0;
+}
+
+.myscheme-desc {
+  font-size: var(--font-size-body);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 var(--spacing-lg) 0;
+  line-height: 1.6;
+}
+
+.myscheme-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 24px;
+  background-color: #fff;
+  color: #667eea;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: var(--font-size-body);
+  font-weight: 700;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.myscheme-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.myscheme-button:active {
+  transform: translateY(0);
 }

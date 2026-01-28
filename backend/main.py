@@ -18,6 +18,9 @@ from scheme_models import (
 
 app = FastAPI(title="Sahaj Seva API", version="1.0.0")
 
+# Config: Toggle between curated schemes vs. future API mode
+USE_CURATED_SCHEMES = os.getenv("USE_CURATED_SCHEMES", "true").lower() == "true"
+
 # Add scheme finder endpoint
 SCHEMES_PATH = os.path.join(os.path.dirname(__file__), "schemes.json")
 with open(SCHEMES_PATH, "r", encoding="utf-8") as f:
@@ -411,6 +414,7 @@ async def scheme_finder(payload: SchemeFinderRequest, request: Request):
                     "name": scheme_name,
                     "benefits": scheme_benefits,
                     "why": why,
+                    "portal_url": scheme.get("portal_url", ""),
                 }
             )
 
