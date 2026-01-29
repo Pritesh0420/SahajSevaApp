@@ -635,7 +635,64 @@ def _basic_field_guess_from_text(extracted_text: str, *, language: str, max_fiel
     fields: List[FormField] = []
     seen = set()
 
-    # Look for common form field patterns - improved to capture longer field names
+    def _normalize_label(label: str) -> str:
+        s = (label or "").strip()
+        s = re.sub(r"^[\s\-–—•*#\d.()]+", "", s)
+        s = re.sub(r"\s+", " ", s)
+        # Remove common instruction prefixes if OCR merges them into the label.
+        s = re.sub(r"^(please|kindly)\s+(provide|enter|fill|write)\s+", "", s, flags=re.IGNORECASE)
+        # Trim trailing punctuation/underscores
+        s = re.sub(r"[\s:;\-–_]+$", "", s).strip()
+        return s
+
+    def _is_non_user_field(label: str) -> bool:
+        t = (label or "").strip().lower()
+        if not t:
+            return True
+        # Ignore administrative/instructional sections.
+        blocked_phrases = [
+            "for office use",
+            "office use only",
+            "to be filled by",
+            "for official use",
+            "for departmental use",
+            "instructions",
+            "important instructions",
+            "note:",
+            "note ",
+            "declaration",
+            "undertaking",
+            "terms and conditions",
+            "terms & conditions",
+            "annexure",
+            "enclosure",
+            "enclosures",
+            "checklist",
+            "certificate",
+            "seal",
+            "signature of officer",
+            "office seal",
+            "do not write",
+            "do not fill",
+        ]
+        if any(p in t for p in blocked_phrases):
+            return True
+        # Too generic or not a label.
+        if t in {"page", "form", "application", "government"}:
+            return True
+        return False
+
+    def _infer_field_type(label: str) -> str:
+        t = (label or "").lower()
+        if any(k in t for k in ["photo", "photograph", "image", "picture", "passport size", "signature", "thumb impression", "फोटो", "हस्ताक्षर", "अंगूठा"]):
+            return "photo"
+        if any(k in t for k in ["mobile", "phone", "contact", "pincode", "pin code", "zip", "age", "मोबाइल", "फोन", "पिन", "आयु"]):
+            return "number"
+        if any(k in t for k in ["date", "dob", "birth", "जन्म", "तिथि"]):
+            return "date"
+        return "text"
+
+    # Look for common form field patterns
     patterns = [
         r"([A-Za-z][A-Za-z0-9 ,/\-]{3,80})\s*[:\-–_]+\s*",  # Name: _____ or Address Details:
         r"\d+\.\s*([A-Za-z][A-Za-z0-9 ,/\-]{3,80})(?:\s*[:\-–_]|$)",  # 1. Name or 1. Full Address
@@ -665,17 +722,10 @@ def _basic_field_guess_from_text(extracted_text: str, *, language: str, max_fiel
         for pattern in patterns:
             matches = re.findall(pattern, line, re.IGNORECASE)
             for match in matches:
-                candidate_name = match.strip()
+                candidate_name = _normalize_label(match)
                 
-                # Skip common words that aren't field names
-                skip_words = {'page', 'form', 'application', 'government', 'date', 'the', 'and', 'for', 'of', 'to', 
-                             'please', 'provide', 'enter', 'fill', 'write', 'details', 'information'}
-                
-                # Clean up trailing punctuation and extra words
-                candidate_name = re.sub(r'[:\-–_]+$', '', candidate_name).strip()
-                
-                # Skip if too short or in skip words
-                if len(candidate_name) < 3 or candidate_name.lower() in skip_words:
+                # Skip if too short or clearly not a user-fill field
+                if len(candidate_name) < 3 or _is_non_user_field(candidate_name):
                     continue
                 
                 # Skip if already seen
@@ -684,11 +734,13 @@ def _basic_field_guess_from_text(extracted_text: str, *, language: str, max_fiel
 
                 seen.add(candidate_name.lower())
                 
-                # Detect if this is a photo/image field
+                # Detect field type
                 lower_name = candidate_name.lower()
-                field_type = "photo" if any(keyword in lower_name for keyword in photo_keywords) else "text"
+                field_type = _infer_field_type(candidate_name)
+                if field_type == "text" and any(keyword in lower_name for keyword in photo_keywords):
+                    field_type = "photo"
 
-                # Localize description (and optionally field name) for Hindi mode
+                # Localize field name for Hindi mode; keep descriptions short to avoid repetitive questions
                 if (language or "").strip().lower() == "hi":
                     display_name = candidate_name
                     if not _is_likely_hindi(display_name):
@@ -697,10 +749,10 @@ def _basic_field_guess_from_text(extracted_text: str, *, language: str, max_fiel
                     if field_type == "photo":
                         description = f"{strings['provide_prefix']}{display_name}{strings['upload_suffix']}"
                     else:
-                        description = f"{strings['provide_prefix']}{display_name}{strings['provide_suffix']}"
+                        description = ""
                     field_name_out = display_name
                 else:
-                    description = f"{strings['provide_prefix']}{candidate_name.lower()}{strings['provide_suffix']}"
+                    description = "" if field_type != "photo" else f"{strings['provide_prefix']}{candidate_name}{strings['upload_suffix']}"
                     field_name_out = candidate_name
 
                 fields.append(
@@ -732,6 +784,74 @@ def _basic_field_guess_from_text(extracted_text: str, *, language: str, max_fiel
 def _fallback_form_analysis(extracted_text: str, original_filename: str, *, language: str) -> FormAnalysis:
     strings = _localize_fallback_strings(language)
     guessed_fields = _basic_field_guess_from_text(extracted_text, language=language)
+
+    # Ensure we ask a minimum of 4 questions so the Form Assistant always works.
+    # If extraction is poor (scanned / low quality), we fall back to common form fields.
+    def _add_field_if_missing(name_en: str, desc_en: str, name_hi: str, desc_hi: str, field_type: str = "text"):
+        existing = {str(getattr(f, "field_name", "") or "").strip().lower() for f in (guessed_fields or [])}
+        candidate = (name_hi if (language or "").strip().lower() == "hi" else name_en).strip()
+        if not candidate:
+            return
+        if candidate.strip().lower() in existing:
+            return
+        guessed_fields.append(
+            FormField(
+                field_name=candidate,
+                field_type=field_type,
+                required=False,
+                description=(desc_hi if (language or "").strip().lower() == "hi" else desc_en),
+                example="",
+            )
+        )
+
+    common_defaults = [
+        (
+            "Full Name",
+            "Please enter your full name as per ID.",
+            "पूरा नाम",
+            "कृपया पहचान पत्र के अनुसार अपना पूरा नाम लिखें।",
+            "text",
+        ),
+        (
+            "Mobile Number",
+            "Enter a valid 10-digit mobile number.",
+            "मोबाइल नंबर",
+            "कृपया 10 अंकों का वैध मोबाइल नंबर लिखें।",
+            "number",
+        ),
+        (
+            "Address",
+            "Enter your full current address.",
+            "पता",
+            "कृपया अपना पूरा वर्तमान पता लिखें।",
+            "text",
+        ),
+        (
+            "ID Proof (Aadhaar / Voter ID)",
+            "Enter your Aadhaar or Voter ID number (if available).",
+            "पहचान प्रमाण (आधार / वोटर आईडी)",
+            "यदि उपलब्ध हो तो अपना आधार या वोटर आईडी नंबर लिखें।",
+            "text",
+        ),
+    ]
+
+    if guessed_fields is None:
+        guessed_fields = []
+
+    while len(guessed_fields) < 4:
+        idx = len(guessed_fields)
+        if idx < len(common_defaults):
+            n_en, d_en, n_hi, d_hi, ftype = common_defaults[idx]
+            _add_field_if_missing(n_en, d_en, n_hi, d_hi, ftype)
+        else:
+            # Last resort filler
+            _add_field_if_missing(
+                f"Additional detail {idx + 1}",
+                "Please provide the required detail.",
+                f"अतिरिक्त जानकारी {idx + 1}",
+                "कृपया आवश्यक जानकारी प्रदान करें।",
+                "text",
+            )
     
     # Try to extract form name from text
     form_name = "Application Form"
@@ -758,6 +878,38 @@ def _fallback_form_analysis(extracted_text: str, original_filename: str, *, lang
         fields=guessed_fields,
         warnings=strings["warnings"],
     )
+
+
+def _is_non_user_fill_field_name(label: str) -> bool:
+    t = (label or "").strip().lower()
+    if not t:
+        return True
+    blocked_phrases = [
+        "for office use",
+        "office use only",
+        "to be filled by",
+        "for official use",
+        "for departmental use",
+        "instructions",
+        "important instructions",
+        "note:",
+        "note ",
+        "declaration",
+        "undertaking",
+        "terms and conditions",
+        "terms & conditions",
+        "annexure",
+        "enclosure",
+        "enclosures",
+        "checklist",
+        "certificate",
+        "seal",
+        "signature of officer",
+        "office seal",
+        "do not write",
+        "do not fill",
+    ]
+    return any(p in t for p in blocked_phrases)
 
 
 def _translate_text(text: str, target_lang: str) -> str:
@@ -909,71 +1061,51 @@ async def analyze_form(
             else:
                 raise
 
+        # We'll compute analysis first, then ALWAYS create a session_id before returning.
+        fallback = False
+        warning_msg: Optional[str] = None
+
         if not (extracted_text or "").strip():
-            # Keep UX smooth: return a minimal analysis rather than a hard failure.
+            # Keep UX smooth: use fallback analysis rather than hard failing.
             result_json = _fallback_form_analysis("", file.filename, language=language).model_dump()
-            intro_text = _create_intro_text(
-                result_json.get("form_name", "Form"),
-                result_json.get("purpose", ""),
-                result_json.get("fields", []),
-                language,
-            )
-            voice_note_url, lang = _create_voice_note(intro_text, language)
-            return {
-                "form_analysis": result_json,
-                "voice_note_url": voice_note_url,
-                "language_detected": lang,
-                "fallback": True,
-                "warning": "Could not extract readable text from the document; using fallback form analysis.",
-            }
+            fallback = True
+            warning_msg = "Could not extract readable text from the document; using fallback form analysis."
+        else:
+            result_json = None
 
-        if client is None:
-            if not ALLOW_ANALYZE_WITHOUT_LLM:
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "code": "llm_not_configured",
-                        "message": "GOOGLE_API_KEY is not configured on the server.",
-                    },
-                )
+        if result_json is None:
+            if client is None:
+                if not ALLOW_ANALYZE_WITHOUT_LLM:
+                    raise HTTPException(
+                        status_code=503,
+                        detail={
+                            "code": "llm_not_configured",
+                            "message": "GOOGLE_API_KEY is not configured on the server.",
+                        },
+                    )
 
-            result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
-            
-            # Create introductory voice note in selected language
-            intro_text = _create_intro_text(
-                result_json.get("form_name", "Form"), 
-                result_json.get("purpose", ""), 
-                result_json.get("fields", []),
-                language
-            )
-            voice_note_url, lang = _create_voice_note(intro_text, language)
-            
-            return {
-                "form_analysis": result_json,
-                "voice_note_url": voice_note_url,
-                "language_detected": lang,
-                "fallback": True,
-            }
-
-        prompt = f"""
+                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
+                fallback = True
+            else:
+                prompt = f"""
 You are analyzing an Indian government application form.
 
 Return JSON only:
 {{
-  "form_id": "...",
-  "form_name": "...",
-  "purpose": "...",
-  "eligibility": "...",
-  "fields": [
+  \"form_id\": \"...\",
+  \"form_name\": \"...\",
+  \"purpose\": \"...\",
+  \"eligibility\": \"...\",
+  \"fields\": [
     {{
-      "field_name": "...",
-      "field_type": "text/number/date",
-      "required": true,
-      "description": "...",
-      "example": "..."
+      \"field_name\": \"...\",
+      \"field_type\": \"text/number/date\",
+      \"required\": true,
+      \"description\": \"...\",
+      \"example\": \"...\"
     }}
   ],
-  "warnings": ["..."]
+  \"warnings\": [\"...\"]
 }}
 
 Use very simple language for senior citizens.
@@ -982,151 +1114,150 @@ FORM TEXT:
 \"\"\"{extracted_text}\"\"\"
 """
 
-        try:
-            full_prompt = "You only return valid JSON. No markdown. No explanation.\n\n" + prompt
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=full_prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.2,
-                ),
-            )
-            result_text = response.text
-        except Exception as e:
-            error_str = str(e).lower()
-            # Handle quota/rate limiting
-            if "quota" in error_str or "rate" in error_str or "429" in error_str:
-                if not ALLOW_ANALYZE_WITHOUT_LLM:
-                    raise HTTPException(
-                        status_code=429,
-                        detail={
-                            "code": "gemini_rate_limited",
-                            "message": "LLM request was rate-limited or quota was exceeded.",
-                            "provider_error": str(e),
-                        },
+                try:
+                    full_prompt = "You only return valid JSON. No markdown. No explanation.\n\n" + prompt
+                    response = client.models.generate_content(
+                        model=MODEL_NAME,
+                        contents=full_prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.2,
+                        ),
                     )
-                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
-                intro_text = _create_intro_text(
-                    result_json.get("form_name", "Form"), 
-                    result_json.get("purpose", ""), 
-                    result_json.get("fields", []),
-                    language
-                )
-                voice_note_url, lang = _create_voice_note(intro_text, language)
-                return {"form_analysis": result_json, "voice_note_url": voice_note_url, "language_detected": lang, "fallback": True}
-            
-            # Handle authentication errors
-            elif "api key" in error_str or "invalid" in error_str or "auth" in error_str:
-                if not ALLOW_ANALYZE_WITHOUT_LLM:
-                    raise HTTPException(
-                        status_code=401,
-                        detail={
-                            "code": "gemini_auth_failed",
-                            "message": "LLM authentication failed. Check GOOGLE_API_KEY.",
-                            "provider_error": str(e),
-                        },
-                    )
-                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
-                intro_text = _create_intro_text(
-                    result_json.get("form_name", "Form"), 
-                    result_json.get("purpose", ""), 
-                    result_json.get("fields", []),
-                    language
-                )
-                voice_note_url, lang = _create_voice_note(intro_text, language)
-                return {"form_analysis": result_json, "voice_note_url": voice_note_url, "language_detected": lang, "fallback": True}
-            
-            # Handle connection errors
-            else:
-                if not ALLOW_ANALYZE_WITHOUT_LLM:
-                    raise HTTPException(
-                        status_code=503,
-                        detail={
-                            "code": "gemini_error",
-                            "message": "Could not reach the LLM provider or other error occurred.",
-                            "provider_error": str(e),
-                        },
-                    )
-                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
-                intro_text = _create_intro_text(
-                    result_json.get("form_name", "Form"), 
-                    result_json.get("purpose", ""), 
-                    result_json.get("fields", []),
-                    language
-                )
-                voice_note_url, lang = _create_voice_note(intro_text, language)
-                return {"form_analysis": result_json, "voice_note_url": voice_note_url, "language_detected": lang, "fallback": True}
-        # Clean up response text (remove markdown code blocks if present)
-        result_text = result_text.strip()
-        if result_text.startswith("```json"):
-            result_text = result_text[7:]
-        if result_text.startswith("```"):
-            result_text = result_text[3:]
-        if result_text.endswith("```"):
-            result_text = result_text[:-3]
-        result_text = result_text.strip()
-        
-        try:
-            result_json = json.loads(result_text)
-        except Exception as e:
-            if ALLOW_ANALYZE_WITHOUT_LLM:
-                result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
-                intro_text = _create_intro_text(
-                    result_json.get("form_name", "Form"), 
-                    result_json.get("purpose", ""), 
-                    result_json.get("fields", []),
-                    language
-                )
-                voice_note_url, lang = _create_voice_note(intro_text, language)
-                return {
-                    "form_analysis": result_json,
-                    "voice_note_url": voice_note_url,
-                    "language_detected": lang,
-                    "fallback": True,
-                    "warning": "LLM returned invalid JSON; using fallback analysis instead.",
-                }
+                    result_text = response.text
+                except Exception as e:
+                    error_str = str(e).lower()
+                    if not ALLOW_ANALYZE_WITHOUT_LLM:
+                        status = 503
+                        code = "gemini_error"
+                        message = "Could not reach the LLM provider or other error occurred."
+                        if "quota" in error_str or "rate" in error_str or "429" in error_str:
+                            status = 429
+                            code = "gemini_rate_limited"
+                            message = "LLM request was rate-limited or quota was exceeded."
+                        elif "api key" in error_str or "invalid" in error_str or "auth" in error_str:
+                            status = 401
+                            code = "gemini_auth_failed"
+                            message = "LLM authentication failed. Check GOOGLE_API_KEY."
+                        raise HTTPException(
+                            status_code=status,
+                            detail={
+                                "code": code,
+                                "message": message,
+                                "provider_error": str(e),
+                            },
+                        )
 
-            raise HTTPException(
-                status_code=502,
-                detail={
-                    "code": "invalid_llm_json",
-                    "message": "LLM response was not valid JSON.",
-                    "provider_error": str(e),
-                },
-            )
+                    result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
+                    fallback = True
+                    warning_msg = "AI analysis was unavailable; using fallback form analysis."
+                else:
+                    # Clean up response text (remove markdown code blocks if present)
+                    result_text = result_text.strip()
+                    if result_text.startswith("```json"):
+                        result_text = result_text[7:]
+                    if result_text.startswith("```"):
+                        result_text = result_text[3:]
+                    if result_text.endswith("```"):
+                        result_text = result_text[:-3]
+                    result_text = result_text.strip()
+
+                    try:
+                        result_json = json.loads(result_text)
+                    except Exception as e:
+                        if ALLOW_ANALYZE_WITHOUT_LLM:
+                            result_json = _fallback_form_analysis(extracted_text, file.filename, language=language).model_dump()
+                            fallback = True
+                            warning_msg = "LLM returned invalid JSON; using fallback analysis instead."
+                        else:
+                            raise HTTPException(
+                                status_code=502,
+                                detail={
+                                    "code": "invalid_llm_json",
+                                    "message": "LLM response was not valid JSON.",
+                                    "provider_error": str(e),
+                                },
+                            )
+
+        # Normalize fields list to guarantee at least 4 questions.
+        try:
+            if isinstance(result_json, dict):
+                fields_in = result_json.get("fields") or []
+                if not isinstance(fields_in, list):
+                    fields_in = []
+                # If LLM returned too few/empty fields, supplement with fallback analysis fields.
+                if len(fields_in) < 4:
+                    supplement = _fallback_form_analysis(extracted_text or "", file.filename, language=language).model_dump().get("fields", [])
+                    merged = []
+                    seen = set()
+                    for f in (fields_in + supplement):
+                        if not isinstance(f, dict):
+                            continue
+                        name = str(f.get("field_name", "") or "").strip()
+                        if not name:
+                            continue
+                        if _is_non_user_fill_field_name(name):
+                            continue
+                        key = name.lower()
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        merged.append(
+                            {
+                                "field_name": name,
+                                "field_type": f.get("field_type") or "text",
+                                "required": bool(f.get("required", False)),
+                                "description": f.get("description") or "",
+                                "example": f.get("example") or "",
+                            }
+                        )
+                    result_json["fields"] = merged[: max(4, len(merged))]
+        except Exception as e:
+            print(f"Could not normalize fields: {e}")
 
         # 🔊 Create Voice Note with introduction and all field details
-        form_name = result_json.get("form_name", "Form")
-        purpose = result_json.get("purpose", "")
-        fields = result_json.get("fields", [])
-        
+        form_name = (result_json or {}).get("form_name", "Form") if isinstance(result_json, dict) else "Form"
+        purpose = (result_json or {}).get("purpose", "") if isinstance(result_json, dict) else ""
+        fields = (result_json or {}).get("fields", []) if isinstance(result_json, dict) else []
+
         intro_text = _create_intro_text(form_name, purpose, fields, language)
         voice_note_url, lang = _create_voice_note(intro_text, language)
 
-        # Create session for conversation
+        # Create session for conversation (ALWAYS)
         session_id = str(uuid.uuid4())
+        form_lang_guess = "en"
+        try:
+            if (extracted_text or "").strip():
+                form_lang_guess = "hi" if any(ord(c) > 127 for c in (extracted_text or "")[:100]) else "en"
+        except Exception:
+            form_lang_guess = "en"
+
         conversation_sessions[session_id] = {
             "form_analysis": result_json,
             "language": language,
             "current_field_index": 0,
             "field_responses": {},
-            "form_language": "hi" if any(ord(c) > 127 for c in extracted_text[:100]) else "en",
+            "form_language": form_lang_guess,
             "original_file_path": path,
         }
-        
-        # Clean up the uploaded file after processing (keep only voice notes)
+
+        # Clean up uploaded file after processing (keep only voice notes)
         try:
             if os.path.exists(path):
                 os.remove(path)
         except Exception as e:
             print(f"Could not delete file {path}: {e}")
 
-        return {
+        payload = {
             "session_id": session_id,
             "form_analysis": result_json,
             "voice_note_url": voice_note_url,
-            "language_detected": lang
+            "language_detected": lang,
         }
+        if fallback:
+            payload["fallback"] = True
+        if warning_msg:
+            payload["warning"] = warning_msg
+        return payload
 
     except HTTPException:
         raise
@@ -1144,8 +1275,30 @@ FORM TEXT:
 
 # 🔹 START FORM FILLING CONVERSATION
 @app.post("/api/start-filling")
-async def start_filling(session_id: str = Form(...)):
+async def start_filling(request: Request, session_id: Optional[str] = Form(default=None)):
     """User confirmed they want to start filling the form"""
+    if not session_id:
+        try:
+            ctype = (request.headers.get("content-type") or "").lower()
+            if "application/json" in ctype:
+                data = await request.json()
+                session_id = (data or {}).get("session_id")
+            else:
+                form = await request.form()
+                session_id = form.get("session_id")
+        except Exception:
+            session_id = session_id
+
+    session_id = (session_id or "").strip()
+    if not session_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "missing_session_id",
+                "message": "session_id is required. Please re-upload the form and try again.",
+            },
+        )
+
     if session_id not in conversation_sessions:
         raise HTTPException(status_code=404, detail="Session not found")
     
@@ -1178,25 +1331,30 @@ async def _get_next_field_question(session_id: str):
     
     field = fields[current_index]
     
-    # Translate field name and description to selected language
-    translated_field_name = _translate_text(field['field_name'], language)
-    translated_description = _translate_text(field['description'], language)
-    
-    # Create question in selected language (NO VOICE NOTE - already played comprehensive intro)
-    question_texts = {
-        "en": f"Please provide: {translated_field_name}. {translated_description}",
-        "hi": f"कृपया प्रदान करें: {translated_field_name}। {translated_description}",
-        "mr": f"कृपया प्रदान करा: {translated_field_name}। {translated_description}",
-        "ta": f"தயவுசெய்து வழங்கவும்: {translated_field_name}। {translated_description}",
-        "te": f"దయచేసి అందించండి: {translated_field_name}। {translated_description}",
-        "bn": f"অনুগ্রহ করে প্রদান করুন: {translated_field_name}। {translated_description}",
-        "gu": f"કૃપા કરીને પ્રદાન કરો: {translated_field_name}। {translated_description}",
-        "kn": f"ದಯವಿಟ್ಟು ಒದಗಿಸಿ: {translated_field_name}। {translated_description}",
-        "ml": f"ദയവായി നൽകുക: {translated_field_name}। {translated_description}",
-        "pa": f"ਕਿਰਪਾ ਕਰਕੇ ਪ੍ਰਦਾਨ ਕਰੋ: {translated_field_name}। {translated_description}",
+    # Translate field name; keep the question short and aligned to the form label.
+    translated_field_name = _translate_text(field.get('field_name', ''), language)
+    translated_description = _translate_text(field.get('description', '') or '', language)
+
+    base_questions = {
+        "en": f"Please enter {translated_field_name}.",
+        "hi": f"कृपया {translated_field_name} लिखें।",
+        "mr": f"कृपया {translated_field_name} लिहा.",
+        "ta": f"தயவுசெய்து {translated_field_name} உள்ளிடவும்.",
+        "te": f"దయచేసి {translated_field_name} నమోదు చేయండి.",
+        "bn": f"অনুগ্রহ করে {translated_field_name} লিখুন।",
+        "gu": f"કૃપા કરીને {translated_field_name} લખો.",
+        "kn": f"ದಯವಿಟ್ಟು {translated_field_name} ನಮೂದಿಸಿ.",
+        "ml": f"ദയവായി {translated_field_name} നൽകുക.",
+        "pa": f"ਕਿਰਪਾ ਕਰਕੇ {translated_field_name} ਲਿਖੋ।",
     }
-    
-    question_text = question_texts.get(language, question_texts["en"])
+    question_text = base_questions.get(language, base_questions["en"])
+
+    # Append description only if it adds value and isn't just a duplicate "please provide".
+    desc = (translated_description or '').strip()
+    if desc:
+        desc_lower = desc.lower()
+        if not any(p in desc_lower for p in ["please provide", "please enter", "कृपया", "provide_prefix"]):
+            question_text += f" {desc}"
     
     # Add example if available
     if field.get('example'):
@@ -1230,11 +1388,37 @@ async def _get_next_field_question(session_id: str):
 
 # 🔹 SUBMIT FIELD RESPONSE
 @app.post("/api/submit-field")
-async def submit_field(
-    session_id: str = Form(...),
-    field_value: str = Form(...)
-):
+async def submit_field(request: Request, session_id: Optional[str] = Form(default=None), field_value: Optional[str] = Form(default=None)):
     """Submit user's response for current field and get next question"""
+    if not session_id or field_value is None:
+        try:
+            ctype = (request.headers.get("content-type") or "").lower()
+            if "application/json" in ctype:
+                data = await request.json()
+                if not session_id:
+                    session_id = (data or {}).get("session_id")
+                if field_value is None:
+                    field_value = (data or {}).get("field_value")
+            else:
+                form = await request.form()
+                if not session_id:
+                    session_id = form.get("session_id")
+                if field_value is None:
+                    field_value = form.get("field_value")
+        except Exception:
+            pass
+
+    session_id = (session_id or "").strip()
+    field_value = "" if field_value is None else str(field_value)
+    if not session_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "missing_session_id",
+                "message": "session_id is required.",
+            },
+        )
+
     if session_id not in conversation_sessions:
         raise HTTPException(status_code=404, detail="Session not found")
     
@@ -1260,17 +1444,64 @@ async def speech_to_text(
     """Convert speech audio to text - supports Hindi and English recognition"""
     try:
         # Save audio temporarily
-        audio_filename = f"{uuid.uuid4()}.{audio.filename.split('.')[-1]}"
-        audio_path = os.path.join(UPLOAD_DIR, audio_filename)
-        
-        with open(audio_path, "wb") as f:
+        in_name = (audio.filename or "recording").strip()
+        in_ext = ""
+        if "." in in_name:
+            in_ext = in_name.rsplit(".", 1)[-1].lower().strip()
+
+        ctype = (audio.content_type or "").lower().strip()
+        if not in_ext:
+            if "webm" in ctype:
+                in_ext = "webm"
+            elif "ogg" in ctype:
+                in_ext = "ogg"
+            elif "mpeg" in ctype or "mp3" in ctype:
+                in_ext = "mp3"
+            elif "wav" in ctype:
+                in_ext = "wav"
+
+        if not in_ext:
+            in_ext = "webm"  # common default from browsers
+
+        audio_in_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}.{in_ext}")
+        with open(audio_in_path, "wb") as f:
             f.write(await audio.read())
-        
+
+        # Convert to WAV if needed (SpeechRecognition expects WAV/AIFF/FLAC).
+        audio_for_sr_path = audio_in_path
+        if in_ext not in {"wav", "aiff", "aif", "flac"}:
+            try:
+                from pydub import AudioSegment  # type: ignore
+                try:
+                    from imageio_ffmpeg import get_ffmpeg_exe  # type: ignore
+                    AudioSegment.converter = get_ffmpeg_exe()
+                except Exception:
+                    # If imageio-ffmpeg isn't installed, rely on system ffmpeg if present.
+                    pass
+
+                wav_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}.wav")
+                seg = AudioSegment.from_file(audio_in_path)
+                seg = seg.set_channels(1).set_frame_rate(16000)
+                seg.export(wav_path, format="wav")
+                audio_for_sr_path = wav_path
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "code": "unsupported_audio_format",
+                        "message": "Unsupported audio format. Please try again (Chrome/Edge recommended).",
+                        "content_type": ctype,
+                        "filename": in_name,
+                        "provider_error": str(e),
+                    },
+                )
+
         # Use Google Speech Recognition
         import speech_recognition as sr
         recognizer = sr.Recognizer()
-        
-        with sr.AudioFile(audio_path) as source:
+
+        with sr.AudioFile(audio_for_sr_path) as source:
+            recognizer.adjust_for_ambient_noise(source, duration=0.5)
             audio_data = recognizer.record(source)
         
         # Map language codes to speech recognition
@@ -1302,11 +1533,13 @@ async def speech_to_text(
             else:
                 raise
         
-        # Clean up audio file
-        try:
-            os.remove(audio_path)
-        except:
-            pass
+        # Clean up audio files
+        for p in {audio_in_path, audio_for_sr_path}:
+            try:
+                if p and os.path.exists(p):
+                    os.remove(p)
+            except Exception:
+                pass
         
         return {"text": text, "success": True, "detected_language": language}
         
@@ -1321,8 +1554,30 @@ async def speech_to_text(
 
 # 🔹 GENERATE FILLED FORM
 @app.post("/api/generate-filled-form")
-async def generate_filled_form(session_id: str = Form(...)):
+async def generate_filled_form(request: Request, session_id: Optional[str] = Form(default=None)):
     """Generate the filled form based on all responses"""
+    if not session_id:
+        try:
+            ctype = (request.headers.get("content-type") or "").lower()
+            if "application/json" in ctype:
+                data = await request.json()
+                session_id = (data or {}).get("session_id")
+            else:
+                form = await request.form()
+                session_id = form.get("session_id")
+        except Exception:
+            pass
+
+    session_id = (session_id or "").strip()
+    if not session_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "missing_session_id",
+                "message": "session_id is required.",
+            },
+        )
+
     if session_id not in conversation_sessions:
         raise HTTPException(status_code=404, detail="Session not found")
     

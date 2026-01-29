@@ -109,6 +109,12 @@ export default function FormAssistantScreen() {
   const handleStartFilling = async () => {
     try {
       setLoading(true);
+
+      if (!sessionId) {
+        throw new Error(language === 'hi'
+          ? 'सेशन आईडी नहीं मिली। कृपया फॉर्म फिर से अपलोड करें।'
+          : 'Missing session id. Please upload the form again.');
+      }
       
       const formData = new FormData();
       formData.append("session_id", sessionId);
@@ -117,6 +123,25 @@ export default function FormAssistantScreen() {
         method: "POST",
         body: formData,
       });
+
+      if (!res.ok) {
+        let detailText = '';
+        try {
+          const maybeJson = await res.json();
+          detailText =
+            (typeof maybeJson?.detail === 'string' ? maybeJson.detail : '') ||
+            (typeof maybeJson?.detail?.message === 'string' ? maybeJson.detail.message : '') ||
+            (typeof maybeJson?.message === 'string' ? maybeJson.message : '') ||
+            JSON.stringify(maybeJson);
+        } catch {
+          try {
+            detailText = await res.text();
+          } catch {
+            detailText = '';
+          }
+        }
+        throw new Error(detailText ? `Server error (${res.status}): ${detailText}` : `Server error (${res.status})`);
+      }
 
       const data = await res.json();
       
@@ -131,7 +156,7 @@ export default function FormAssistantScreen() {
       }
     } catch (err) {
       console.error(err);
-      setError(language === 'hi' ? 'त्रुटि हुई' : 'Error occurred');
+      setError(err?.message || (language === 'hi' ? 'त्रुटि हुई' : 'Error occurred'));
     } finally {
       setLoading(false);
     }
@@ -181,6 +206,25 @@ export default function FormAssistantScreen() {
         body: formData,
       });
 
+      if (!res.ok) {
+        let detailText = '';
+        try {
+          const maybeJson = await res.json();
+          detailText =
+            (typeof maybeJson?.detail === 'string' ? maybeJson.detail : '') ||
+            (typeof maybeJson?.detail?.message === 'string' ? maybeJson.detail.message : '') ||
+            (typeof maybeJson?.message === 'string' ? maybeJson.message : '') ||
+            JSON.stringify(maybeJson);
+        } catch {
+          try {
+            detailText = await res.text();
+          } catch {
+            detailText = '';
+          }
+        }
+        throw new Error(detailText ? `Server error (${res.status}): ${detailText}` : `Server error (${res.status})`);
+      }
+
       const data = await res.json();
       
       if (data.completed) {
@@ -195,7 +239,7 @@ export default function FormAssistantScreen() {
       }
     } catch (err) {
       console.error(err);
-      setError(language === 'hi' ? 'त्रुटि हुई' : 'Error occurred');
+      setError(err?.message || (language === 'hi' ? 'त्रुटि हुई' : 'Error occurred'));
     } finally {
       setLoading(false);
     }
@@ -245,7 +289,16 @@ export default function FormAssistantScreen() {
   const startVoiceRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      // Prefer codecs that browsers actually support; backend will convert to WAV if needed.
+      const preferredMimeTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg'
+      ];
+
+      const chosenMimeType = preferredMimeTypes.find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
+      const mediaRecorder = new MediaRecorder(stream, chosenMimeType ? { mimeType: chosenMimeType } : undefined);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -254,8 +307,9 @@ export default function FormAssistantScreen() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        await sendVoiceToServer(audioBlob);
+        const type = chosenMimeType || mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type });
+        await sendVoiceToServer(audioBlob, type);
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -274,12 +328,14 @@ export default function FormAssistantScreen() {
     }
   };
 
-  const sendVoiceToServer = async (audioBlob) => {
+  const sendVoiceToServer = async (audioBlob, mimeType) => {
     try {
       setLoading(true);
       
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.wav');
+      const mt = (mimeType || '').toLowerCase();
+      const ext = mt.includes('ogg') ? 'ogg' : mt.includes('mp3') || mt.includes('mpeg') ? 'mp3' : 'webm';
+      formData.append('audio', audioBlob, `recording.${ext}`);
       formData.append('language', language);
 
       const res = await fetch(`${BACKEND_URL}/api/speech-to-text`, {
